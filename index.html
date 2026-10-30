@@ -3,68 +3,243 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Monitoring IoT ESP32</title>
+  <title>Dashboard Monitoring Hidroponik IoT</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
-    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; padding: 40px 20px; margin: 0; }
-    .card { background: #1e293b; padding: 25px; border-radius: 12px; width: 100%; max-width: 380px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-align: center; }
-    .nilai { font-size: 3rem; font-weight: 700; color: #38bdf8; margin: 15px 0; }
-    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; background: #334155; margin-bottom: 15px; }
-    button { background: #22c55e; color: white; border: none; padding: 12px 20px; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.2s; }
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --text: #f8fafc;
+      --accent: #38bdf8;
+      --border: #334155;
+    }
+    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
+    .dashboard { width: 100%; max-width: 1200px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
+    @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
+    
+    .main-content { display: flex; flex-direction: column; gap: 20px; }
+    .sidebar { display: flex; flex-direction: column; gap: 20px; }
+    
+    .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); border: 1px solid var(--border); }
+    .card h2 { margin-top: 0; font-size: 1.25rem; }
+    
+    .sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
+    .sensor-box { background: #0f172a; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
+    .sensor-box h3 { margin: 0 0 10px 0; font-size: 0.95rem; color: #94a3b8; }
+    .sensor-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
+    
+    .chart-container { position: relative; height: 320px; width: 100%; }
+    
+    .pump-box { background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; }
+    .pump-box h4 { margin: 0 0 8px 0; font-size: 0.95rem; color: #cbd5e1; }
+    .status-badge { display: block; text-align: center; padding: 6px 10px; border-radius: 999px; font-size: 0.85rem; background: #1e293b; margin-bottom: 10px; font-weight: 600; border: 1px solid var(--border); }
+    
+    button { background: #22c55e; color: white; border: none; padding: 11px 16px; font-size: 0.95rem; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.2s; }
     button.off { background: #ef4444; }
+    button.download-btn { background: #6366f1; }
     button:hover { opacity: 0.9; }
   </style>
 </head>
 <body>
 
-  <div class="card">
-    <h2>Monitoring Sensor</h2>
-    <p>Pembacaan Real-Time ESP32</p>
-    <div class="nilai"><span id="nilai-suhu">--</span> °C</div>
-    
-    <hr style="border: 0.5px solid #334155; margin: 20px 0;">
-    
-    <div class="status-badge">Status Pompa: <strong id="teks-pompa">Memuat...</strong></div>
-    <button id="btn-pompa">Ubah Status Pompa</button>
+  <div class="dashboard">
+    <!-- Kolom Kiri: Data Sensor & Grafik -->
+    <div class="main-content">
+      <div class="card">
+        <h2>📊 Real-Time Sensor Monitoring</h2>
+        <div class="sensor-grid">
+          <div class="sensor-box">
+            <h3>Sensor pH</h3>
+            <div class="sensor-value" id="val-ph">--</div>
+          </div>
+          <div class="sensor-box">
+            <h3>Sensor EC</h3>
+            <div class="sensor-value"><span id="val-ec">--</span> <span style="font-size: 1rem;">mS/cm</span></div>
+          </div>
+          <div class="sensor-box">
+            <h3>Sensor Suhu</h3>
+            <div class="sensor-value"><span id="val-suhu">--</span> <span style="font-size: 1rem;">°C</span></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📈 Grafik Riwayat Pembacaan</h2>
+        <div class="chart-container">
+          <canvas id="sensorChart"></canvas>
+        </div>
+      </div>
+    </div>
+
+    <!-- Kolom Kanan: Kontrol 2 Pompa & Download CSV -->
+    <div class="sidebar">
+      <div class="card">
+        <h2>🎛️ Panel Kontrol Dosing</h2>
+        <hr style="border: 0.5px solid var(--border); margin: 12px 0;">
+        
+        <!-- Tombol Mode Otomatis / Manual -->
+        <button id="btn-mode" style="background: #0ea5e9; margin-bottom: 16px;">Mode: Memuat...</button>
+
+        <!-- Kotak Pompa 1: Nutrisi (EC) -->
+        <div class="pump-box">
+          <h4>🧪 Pompa Nutrisi (Sensor EC)</h4>
+          <span class="status-badge">Status: <span id="teks-pompa-ec">Memuat...</span></span>
+          <button id="btn-pompa-ec">Nyalakan Pompa EC</button>
+        </div>
+
+        <!-- Kotak Pompa 2: pengatur pH -->
+        <div class="pump-box" style="margin-bottom: 0;">
+          <h4>💧 Pompa Larutan pH</h4>
+          <span class="status-badge">Status: <span id="teks-pompa-ph">Memuat...</span></span>
+          <button id="btn-pompa-ph">Nyalakan Pompa pH</button>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>📥 Ekspor Data Log</h2>
+        <hr style="border: 0.5px solid var(--border); margin: 12px 0;">
+        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Unduh rekaman waktu dan pembacaan ketiga sensor ke dalam file CSV.</p>
+        <button class="download-btn" id="btn-download">Download CSV</button>
+      </div>
+    </div>
   </div>
 
   <script type="module">
-    // 1. Import library Firebase langsung dari CDN resmi Google
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
-    // 2. Masukkan kredensial Firebase Anda di sini
+    // Ganti dengan konfigurasi Firebase Anda
     const firebaseConfig = {
       apiKey: "PASTE_WEB_API_KEY_DISINI",
       databaseURL: "PASTE_DATABASE_URL_DISINI"
     };
 
-    // 3. Inisialisasi koneksi ke Realtime Database
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    // 4. Membaca nilai sensor secara Real-Time (Path harus sama dengan di kode ESP32)
-    const suhuRef = ref(db, 'monitoring/suhu');
-    onValue(suhuRef, (snapshot) => {
+    let historyData = [];
+
+    // Inisialisasi Grafik Chart.js
+    const ctx = document.getElementById('sensorChart').getContext('2d');
+    const sensorChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: [],
+        datasets: [
+          { label: 'pH', borderColor: '#38bdf8', data: [], tension: 0.2 },
+          { label: 'EC (mS/cm)', borderColor: '#22c55e', data: [], tension: 0.2 },
+          { label: 'Suhu (°C)', borderColor: '#f59e0b', data: [], tension: 0.2 }
+        ]
+      },
+      options: {
+        responsive: true,
+        maintainAspectRatio: false,
+        scales: {
+          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
+          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+        }
+      }
+    });
+
+    // Membaca sekaligus seluruh node "/monitoring" agar grafik hanya update 1 kali tiap pengiriman ESP32
+    onValue(ref(db, 'monitoring'), (snapshot) => {
       const data = snapshot.val();
-      document.getElementById('nilai-suhu').innerText = data !== null ? Number(data).toFixed(2) : "--";
+      if (!data) return;
+
+      const ph = data.ph !== undefined ? Number(data.ph).toFixed(2) : 0;
+      const ec = data.ec !== undefined ? Number(data.ec).toFixed(2) : 0;
+      const suhu = data.suhu !== undefined ? Number(data.suhu).toFixed(2) : 0;
+      const timeStr = new Date().toLocaleTimeString('id-ID');
+
+      document.getElementById('val-ph').innerText = ph;
+      document.getElementById('val-ec').innerText = ec;
+      document.getElementById('val-suhu').innerText = suhu;
+
+      historyData.push({ time: timeStr, ph: ph, ec: ec, suhu: suhu });
+
+      // Tampilkan 20 titik terakhir di grafik (namun seluruh data tetap tersimpan untuk CSV)
+      const recentData = historyData.slice(-20);
+      sensorChart.data.labels = recentData.map(d => d.time);
+      sensorChart.data.datasets[0].data = recentData.map(d => d.ph);
+      sensorChart.data.datasets[1].data = recentData.map(d => d.ec);
+      sensorChart.data.datasets[2].data = recentData.map(d => d.suhu);
+      sensorChart.update();
     });
 
-    // 5. Membaca & Mengubah status tombol kontrol Pompa
-    const pompaRef = ref(db, 'kontrol/pompa');
-    let statusPompa = false;
-    const btnPompa = document.getElementById('btn-pompa');
-    const teksPompa = document.getElementById('teks-pompa');
+    // --- KONTROL MODE OTOMATIS / MANUAL ---
+    const modeRef = ref(db, 'kontrol/otomatis');
+    let modeOtomatis = true;
+    const btnMode = document.getElementById('btn-mode');
+    const btnPompaEc = document.getElementById('btn-pompa-ec');
+    const btnPompaPh = document.getElementById('btn-pompa-ph');
 
-    onValue(pompaRef, (snapshot) => {
-      statusPompa = Boolean(snapshot.val());
-      teksPompa.innerText = statusPompa ? "MENYALA (ON)" : "MATI (OFF)";
-      btnPompa.innerText = statusPompa ? "Matikan Pompa" : "Nyalakan Pompa";
-      btnPompa.className = statusPompa ? "off" : "";
+    onValue(modeRef, (snapshot) => {
+      modeOtomatis = snapshot.val() !== null ? Boolean(snapshot.val()) : true;
+      btnMode.innerText = modeOtomatis ? "🤖 Mode: OTOMATIS (Klik ke Manual)" : "🖐️ Mode: MANUAL (Klik ke Otomatis)";
+      btnMode.style.background = modeOtomatis ? "#0ea5e9" : "#f59e0b";
+
+      // Kunci tombol manual saat Mode Otomatis aktif
+      [btnPompaEc, btnPompaPh].forEach(btn => {
+        btn.disabled = modeOtomatis;
+        btn.style.opacity = modeOtomatis ? "0.45" : "1";
+        btn.style.cursor = modeOtomatis ? "not-allowed" : "pointer";
+      });
     });
 
-    btnPompa.addEventListener('click', () => {
-      // Mengirim nilai kebalikannya (toggle true/false) ke Firebase
-      set(pompaRef, !statusPompa);
+    btnMode.addEventListener('click', () => set(modeRef, !modeOtomatis));
+
+    // --- KONTROL POMPA 1: NUTRISI (EC) ---
+    const pompaEcRef = ref(db, 'kontrol/pompa_ec');
+    let statusPompaEc = false;
+    const teksPompaEc = document.getElementById('teks-pompa-ec');
+
+    onValue(pompaEcRef, (snapshot) => {
+      statusPompaEc = Boolean(snapshot.val());
+      teksPompaEc.innerText = statusPompaEc ? "MENYALA (ON)" : "MATI (OFF)";
+      teksPompaEc.style.color = statusPompaEc ? "#22c55e" : "#ef4444";
+      btnPompaEc.innerText = statusPompaEc ? "Matikan Pompa EC" : "Nyalakan Pompa EC";
+      btnPompaEc.className = statusPompaEc ? "off" : "";
+    });
+
+    btnPompaEc.addEventListener('click', () => {
+      if (!modeOtomatis) set(pompaEcRef, !statusPompaEc);
+    });
+
+    // --- KONTROL POMPA 2: LARUTAN pH ---
+    const pompaPhRef = ref(db, 'kontrol/pompa_ph');
+    let statusPompaPh = false;
+    const teksPompaPh = document.getElementById('teks-pompa-ph');
+
+    onValue(pompaPhRef, (snapshot) => {
+      statusPompaPh = Boolean(snapshot.val());
+      teksPompaPh.innerText = statusPompaPh ? "MENYALA (ON)" : "MATI (OFF)";
+      teksPompaPh.style.color = statusPompaPh ? "#22c55e" : "#ef4444";
+      btnPompaPh.innerText = statusPompaPh ? "Matikan Pompa pH" : "Nyalakan Pompa pH";
+      btnPompaPh.className = statusPompaPh ? "off" : "";
+    });
+
+    btnPompaPh.addEventListener('click', () => {
+      if (!modeOtomatis) set(pompaPhRef, !statusPompaPh);
+    });
+
+    // --- FITUR DOWNLOAD CSV ---
+    document.getElementById('btn-download').addEventListener('click', () => {
+      if (historyData.length === 0) {
+        alert("Belum ada data sensor yang terekam!");
+        return;
+      }
+      let csvContent = "data:text/csv;charset=utf-8,Waktu,pH,EC (mS/cm),Suhu (C)\n";
+      historyData.forEach(row => {
+        csvContent += `${row.time},${row.ph},${row.ec},${row.suhu}\n`;
+      });
+      
+      const encodedUri = encodeURI(csvContent);
+      const link = document.createElement("a");
+      link.setAttribute("href", encodedUri);
+      link.setAttribute("download", "log_hidroponik_sensor.csv");
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
     });
   </script>
 </body>
