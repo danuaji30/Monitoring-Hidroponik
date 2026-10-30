@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Monitoring IoT ESP32</title>
+  <style>
+    body { font-family: system-ui, sans-serif; background: #0f172a; color: #f8fafc; display: flex; justify-content: center; padding: 40px 20px; margin: 0; }
+    .card { background: #1e293b; padding: 25px; border-radius: 12px; width: 100%; max-width: 380px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); text-align: center; }
+    .nilai { font-size: 3rem; font-weight: 700; color: #38bdf8; margin: 15px 0; }
+    .status-badge { display: inline-block; padding: 4px 12px; border-radius: 999px; font-size: 0.85rem; background: #334155; margin-bottom: 15px; }
+    button { background: #22c55e; color: white; border: none; padding: 12px 20px; font-size: 1rem; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.2s; }
+    button.off { background: #ef4444; }
+    button:hover { opacity: 0.9; }
+  </style>
+</head>
+<body>
+
+  <div class="card">
+    <h2>Monitoring Sensor</h2>
+    <p>Pembacaan Real-Time ESP32</p>
+    <div class="nilai"><span id="nilai-suhu">--</span> °C</div>
+    
+    <hr style="border: 0.5px solid #334155; margin: 20px 0;">
+    
+    <div class="status-badge">Status Pompa: <strong id="teks-pompa">Memuat...</strong></div>
+    <button id="btn-pompa">Ubah Status Pompa</button>
+  </div>
+
+  <script type="module">
+    // 1. Import library Firebase langsung dari CDN resmi Google
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+
+    // 2. Masukkan kredensial Firebase Anda di sini
+    const firebaseConfig = {
+      apiKey: "PASTE_WEB_API_KEY_DISINI",
+      databaseURL: "PASTE_DATABASE_URL_DISINI"
+    };
+
+    // 3. Inisialisasi koneksi ke Realtime Database
+    const app = initializeApp(firebaseConfig);
+    const db = getDatabase(app);
+
+    // 4. Membaca nilai sensor secara Real-Time (Path harus sama dengan di kode ESP32)
+    const suhuRef = ref(db, 'monitoring/suhu');
+    onValue(suhuRef, (snapshot) => {
+      const data = snapshot.val();
+      document.getElementById('nilai-suhu').innerText = data !== null ? Number(data).toFixed(2) : "--";
+    });
+
+    // 5. Membaca & Mengubah status tombol kontrol Pompa
+    const pompaRef = ref(db, 'kontrol/pompa');
+    let statusPompa = false;
+    const btnPompa = document.getElementById('btn-pompa');
+    const teksPompa = document.getElementById('teks-pompa');
+
+    onValue(pompaRef, (snapshot) => {
+      statusPompa = Boolean(snapshot.val());
+      teksPompa.innerText = statusPompa ? "MENYALA (ON)" : "MATI (OFF)";
+      btnPompa.innerText = statusPompa ? "Matikan Pompa" : "Nyalakan Pompa";
+      btnPompa.className = statusPompa ? "off" : "";
+    });
+
+    btnPompa.addEventListener('click', () => {
+      // Mengirim nilai kebalikannya (toggle true/false) ke Firebase
+      set(pompaRef, !statusPompa);
+    });
+  </script>
+</body>
+</html>
