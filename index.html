@@ -1,141 +1,421 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-theme="dark">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Dashboard Hidroponik IoT - Pengaturan & Monitoring</title>
+  <title>HydroSmart • Pakcoy Nutrient & pH Controller</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
   <style>
-    :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --text: #f8fafc;
-      --accent: #38bdf8;
-      --border: #334155;
+    :root[data-theme="dark"] {
+      --bg-main: #090d16;
+      --bg-panel: #111726;
+      --bg-card: #161e31;
+      --bg-input: #0d1322;
+      --border: #232f46;
+      --border-hover: #3b82f6;
+      --text-main: #f1f5f9;
+      --text-muted: #8b9bb4;
+      --accent-blue: #3b82f6;
+      --accent-green: #10b981;
+      --accent-amber: #f59e0b;
+      --accent-red: #ef4444;
+      --bubble-color: rgba(59, 130, 246, 0.13);
+      --shadow: 0 12px 28px -6px rgba(0, 0, 0, 0.6);
     }
-    body { font-family: system-ui, sans-serif; background: var(--bg); color: var(--text); margin: 0; padding: 20px; display: flex; justify-content: center; }
-    .dashboard { width: 100%; max-width: 1200px; display: grid; grid-template-columns: 1fr 340px; gap: 20px; }
-    @media (max-width: 900px) { .dashboard { grid-template-columns: 1fr; } }
-    
-    .main-content { display: flex; flex-direction: column; gap: 20px; }
-    .sidebar { display: flex; flex-direction: column; gap: 20px; }
-    
-    .card { background: var(--card-bg); padding: 20px; border-radius: 12px; box-shadow: 0 10px 15px -3px rgba(0,0,0,0.5); border: 1px solid var(--border); }
-    .card h2 { margin-top: 0; font-size: 1.25rem; }
-    
-    .sensor-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 15px; }
-    .sensor-box { background: #0f172a; padding: 15px; border-radius: 8px; text-align: center; border: 1px solid var(--border); }
-    .sensor-box h3 { margin: 0 0 10px 0; font-size: 0.95rem; color: #94a3b8; }
-    .sensor-value { font-size: 1.8rem; font-weight: 700; color: var(--accent); }
-    
-    .chart-container { position: relative; height: 320px; width: 100%; }
-    
-    .control-group { background: #0f172a; padding: 14px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 12px; }
-    .control-group h4 { margin: 0 0 8px 0; font-size: 0.95rem; color: #cbd5e1; }
-    .status-badge { display: block; text-align: center; padding: 6px 10px; border-radius: 999px; font-size: 0.85rem; background: #1e293b; margin-bottom: 10px; font-weight: 600; border: 1px solid var(--border); }
-    
-    /* Style untuk form input target */
-    .input-row { display: flex; gap: 8px; margin-top: 8px; }
-    input[type="number"] { width: 100%; background: #1e293b; border: 1px solid var(--border); color: white; padding: 8px; border-radius: 6px; font-size: 0.95rem; text-align: center; }
-    
-    button { background: #22c55e; color: white; border: none; padding: 11px 16px; font-size: 0.95rem; font-weight: 600; border-radius: 8px; cursor: pointer; width: 100%; transition: 0.2s; }
-    button.off { background: #ef4444; }
-    button.secondary-btn { background: #0ea5e9; }
-    button.download-btn { background: #6366f1; }
-    button:hover { opacity: 0.9; }
+
+    :root[data-theme="light"] {
+      --bg-main: #f1f5f9;
+      --bg-panel: #ffffff;
+      --bg-card: #f8fafc;
+      --bg-input: #ffffff;
+      --border: #e2e8f0;
+      --border-hover: #2563eb;
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --accent-blue: #2563eb;
+      --accent-green: #059669;
+      --accent-amber: #d97706;
+      --accent-red: #dc2626;
+      --bubble-color: rgba(37, 99, 235, 0.08);
+      --shadow: 0 10px 24px -6px rgba(15, 23, 42, 0.08);
+    }
+
+    * { box-sizing: border-box; transition: background-color 0.25s ease, border-color 0.25s ease, color 0.2s ease; }
+    body {
+      font-family: 'Inter', system-ui, sans-serif;
+      background-color: var(--bg-main);
+      color: var(--text-main);
+      margin: 0;
+      padding: 22px 16px;
+      display: flex;
+      justify-content: center;
+    }
+
+    .wrapper { width: 100%; max-width: 1160px; display: flex; flex-direction: column; gap: 18px; }
+
+    /* Efek Interaksi Bubble Glow */
+    .bubble-card {
+      position: relative;
+      overflow: hidden;
+      background: var(--bg-panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), border-color 0.25s ease;
+    }
+    .bubble-card::before {
+      content: "";
+      position: absolute;
+      width: 240px; height: 240px;
+      background: radial-gradient(circle, var(--bubble-color) 0%, transparent 70%);
+      border-radius: 50%;
+      top: var(--y, -200px); left: var(--x, -200px);
+      transform: translate(-50%, -50%) scale(0);
+      transition: transform 0.45s cubic-bezier(0.22, 1, 0.36, 1);
+      pointer-events: none; z-index: 0;
+    }
+    .bubble-card:hover::before { transform: translate(-50%, -50%) scale(1.4); }
+    .bubble-card:hover { transform: translateY(-3px); border-color: var(--border-hover); }
+    .bubble-card > * { position: relative; z-index: 1; }
+
+    /* HEADER BAR */
+    .top-bar { display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; flex-wrap: wrap; gap: 14px; }
+    .brand { display: flex; align-items: center; gap: 14px; }
+    .brand-icon {
+      width: 42px; height: 42px; border-radius: 11px;
+      background: linear-gradient(135deg, #10b981, #059669);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.35rem; color: #fff;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.35);
+    }
+    .brand-text h1 { margin: 0; font-size: 1.1rem; font-weight: 700; }
+    .brand-text p { margin: 2px 0 0; font-size: 0.78rem; color: var(--text-muted); }
+
+    .header-actions { display: flex; align-items: center; gap: 12px; }
+    .clock-box { background: var(--bg-card); border: 1px solid var(--border); padding: 7px 14px; border-radius: 10px; text-align: right; }
+    .clock-date { font-size: 0.68rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.05em; }
+    .clock-time { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700; margin-top: 1px; }
+
+    .theme-btn {
+      width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+      background: var(--bg-card); color: var(--text-main); cursor: pointer; font-size: 1.15rem;
+      display: flex; align-items: center; justify-content: center;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .theme-btn:hover { transform: scale(1.1) rotate(12deg); border-color: var(--accent-blue); }
+
+    /* GRID UTAMA 2 KOLOM */
+    .main-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
+    @media (max-width: 940px) { .main-grid { grid-template-columns: 1fr; } }
+
+    .panel { padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .panel-header { display: flex; justify-content: space-between; align-items: center; }
+    .panel-title { display: flex; align-items: center; gap: 8px; font-size: 0.95rem; font-weight: 700; margin: 0; }
+
+    .badge-pill {
+      font-size: 0.7rem; font-weight: 700; padding: 4px 10px; border-radius: 999px;
+      display: inline-flex; align-items: center; gap: 6px;
+      background: rgba(16, 185, 129, 0.15); color: var(--accent-green); border: 1px solid rgba(16, 185, 129, 0.3);
+    }
+    .badge-pill.warn { background: rgba(245, 158, 11, 0.15); color: var(--accent-amber); border-color: rgba(245, 158, 11, 0.3); }
+    .badge-pill.danger { background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border-color: rgba(239, 68, 68, 0.3); }
+
+    /* SENSOR BOXES */
+    .sensor-row { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .sensor-item { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px 10px; text-align: center; }
+    .sensor-label { font-size: 0.71rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em; }
+    .sensor-val { font-family: 'JetBrains Mono', monospace; font-size: 1.5rem; font-weight: 700; margin: 6px 0 4px; }
+    .sensor-sub { font-size: 0.68rem; color: var(--text-muted); }
+
+    /* CHART BOX */
+    .chart-box { background: var(--bg-card); border: 1px solid var(--border); border-radius: 12px; padding: 14px; }
+    .chart-head { display: flex; justify-content: space-between; font-size: 0.75rem; color: var(--text-muted); margin-bottom: 8px; font-weight: 600; }
+    .chart-wrap { position: relative; height: 225px; width: 100%; }
+
+    /* KARTU KONTROL 3 POMPA */
+    .relay-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+    @media (max-width: 580px) { .relay-grid { grid-template-columns: 1fr; } }
+
+    .relay-card {
+      background: var(--bg-card); border: 1px solid var(--border);
+      border-radius: 14px; padding: 13px;
+      display: flex; flex-direction: column; justify-content: space-between; gap: 10px;
+    }
+    .relay-card.active-glow { border-color: var(--accent-green); box-shadow: 0 0 18px rgba(16, 185, 129, 0.14); }
+
+    .relay-top { display: flex; justify-content: space-between; align-items: flex-start; }
+    .relay-icon {
+      width: 32px; height: 32px; border-radius: 9px;
+      background: rgba(59, 130, 246, 0.12);
+      display: flex; align-items: center; justify-content: center; font-size: 1rem;
+    }
+    .kanal-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--text-muted); background: var(--bg-panel); padding: 2px 6px; border-radius: 5px; border: 1px solid var(--border); }
+
+    .relay-name { font-size: 0.85rem; font-weight: 700; margin: 4px 0; }
+    .priority-tag {
+      display: inline-block; font-size: 0.6rem; font-weight: 700;
+      padding: 2px 7px; border-radius: 5px;
+      background: rgba(16, 185, 129, 0.15); color: var(--accent-green); text-transform: uppercase;
+    }
+
+    .relay-footer { display: flex; justify-content: space-between; align-items: center; padding-top: 9px; border-top: 1px solid var(--border); }
+    .status-dot-wrap { display: flex; align-items: center; gap: 6px; font-size: 0.74rem; font-weight: 600; }
+    .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--text-muted); }
+    .dot.on { background: var(--accent-green); box-shadow: 0 0 8px var(--accent-green); }
+
+    /* TOMBOL SWITCH KECIL */
+    .switch { position: relative; display: inline-block; width: 38px; height: 20px; }
+    .switch input { opacity: 0; width: 0; height: 0; }
+    .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #334155; transition: .25s; border-radius: 20px; }
+    .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .25s cubic-bezier(0.34, 1.56, 0.64, 1); border-radius: 50%; }
+    input:checked + .slider { background-color: var(--accent-green); }
+    input:checked + .slider:before { transform: translateX(18px); }
+    input:disabled + .slider { opacity: 0.45; cursor: not-allowed; }
+
+    /* PANEL TARGET SETTING MIN-MAX PAKCOY */
+    .target-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+    .target-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+    .range-box { background: var(--bg-panel); border: 1px solid var(--border); border-radius: 10px; padding: 10px; }
+    .range-box-title { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
+    .dual-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
+    .mini-field label { display: block; font-size: 0.63rem; color: var(--text-muted); margin-bottom: 3px; }
+    .mini-field input {
+      width: 100%; background: var(--bg-input); border: 1px solid var(--border);
+      color: var(--text-main); border-radius: 6px; padding: 5px 7px;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; text-align: center;
+    }
+    .btn-save-range {
+      width: 100%; background: var(--accent-blue); color: #fff; border: none;
+      border-radius: 7px; padding: 6px; font-size: 0.73rem; font-weight: 600; cursor: pointer;
+    }
+    .btn-save-range:hover { opacity: 0.92; }
+
+    /* BANNER BAWAH EKSPOR CSV */
+    .bottom-banner { display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; gap: 16px; flex-wrap: wrap; }
+    .banner-info { display: flex; align-items: center; gap: 14px; }
+    .banner-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
+    .banner-text h4 { margin: 0; font-size: 0.9rem; font-weight: 700; }
+    .banner-text p { margin: 3px 0 0; font-size: 0.76rem; color: var(--text-muted); }
+
+    .btn-action {
+      padding: 9px 18px; border-radius: 9px; font-size: 0.82rem; font-weight: 600;
+      border: none; cursor: pointer; display: inline-flex; align-items: center; gap: 7px;
+      background: var(--accent-blue); color: white;
+      transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+    .btn-action:hover { transform: scale(1.05); }
   </style>
 </head>
 <body>
 
-  <div class="dashboard">
-    <!-- Kolom Kiri: Sensor & Grafik -->
-    <div class="main-content">
-      <div class="card">
-        <h2>📊 Real-Time Sensor Monitoring</h2>
-        <div class="sensor-grid">
-          <div class="sensor-box">
-            <h3>Sensor pH</h3>
-            <div class="sensor-value" id="val-ph">--</div>
-          </div>
-          <div class="sensor-box">
-            <h3>Sensor EC</h3>
-            <div class="sensor-value"><span id="val-ec">--</span> <span style="font-size: 1rem;">ppm</span></div>
-          </div>
-          <div class="sensor-box">
-            <h3>Sensor Suhu</h3>
-            <div class="sensor-value"><span id="val-suhu">--</span> <span style="font-size: 1rem;">°C</span></div>
-          </div>
+  <div class="wrapper">
+    <!-- HEADER BAR -->
+    <header class="bubble-card top-bar">
+      <div class="brand">
+        <div class="brand-icon">🥬</div>
+        <div class="brand-text">
+          <h1>HydroSmart • Pakcoy AB-Mix & pH Controller</h1>
+          <p>Otomasi 3 Pompa Dosing (Nutrisi A, Nutrisi B & Penstabil pH)</p>
         </div>
       </div>
 
-      <div class="card">
-        <h2>📈 Grafik Riwayat Pembacaan</h2>
-        <div class="chart-container">
-          <canvas id="sensorChart"></canvas>
+      <div class="header-actions">
+        <div class="clock-box">
+          <div class="clock-date" id="rt-date">SABTU, 31 OKTOBER 2026</div>
+          <div class="clock-time"><span id="rt-time">00:00:00</span> WIB</div>
         </div>
+        <button class="theme-btn" id="btn-theme" title="Ubah Tema Terang / Gelap">☀️</button>
       </div>
-    </div>
+    </header>
 
-    <!-- Kolom Kanan: Pengaturan Target, Kontrol Pompa & Download CSV -->
-    <div class="sidebar">
+    <!-- MAIN CONTENT 2 KOLOM -->
+    <div class="main-grid">
       
-      <!-- Card Pengaturan Target (EC & pH) -->
-      <div class="card">
-        <h2>⚙️ Pengaturan Target Dosing</h2>
-        <hr style="border: 0.5px solid var(--border); margin: 12px 0;">
-        
-        <div class="control-group">
-          <h4>Target Minimal EC (mS/cm)</h4>
-          <div class="input-row">
-            <input type="number" id="input-target-ec" step="0.05" placeholder="1.50">
-            <button class="secondary-btn" id="btn-save-ec" style="width: 100px;">Simpan</button>
+      <!-- PANEL KIRI: TELEMETRI SENSOR & GRAFIK -->
+      <section class="bubble-card panel">
+        <div class="panel-header">
+          <h2 class="panel-title">📈 Parameter Air Pakcoy</h2>
+          <span class="badge-pill" id="overall-badge">● RENTANG IDEAL</span>
+        </div>
+
+        <div class="sensor-row">
+          <div class="bubble-card sensor-item">
+            <div class="sensor-label">Kadar pH Air</div>
+            <div class="sensor-val" id="val-ph" style="color: var(--accent-blue);">--</div>
+            <div class="sensor-sub">Ideal: <strong id="lbl-range-ph">5.8 - 6.2</strong></div>
+          </div>
+
+          <div class="bubble-card sensor-item">
+            <div class="sensor-label">Kadar PPM (TDS)</div>
+            <div class="sensor-val"><span id="val-ec" style="color: var(--accent-green);">--</span> <span style="font-size: 0.85rem;">ppm</span></div>
+            <div class="sensor-sub">Ideal: <strong id="lbl-range-ec">1000 - 1200</strong></div>
+          </div>
+
+          <div class="bubble-card sensor-item">
+            <div class="sensor-label">Suhu DS18B20</div>
+            <div class="sensor-val"><span id="val-suhu" style="color: var(--accent-amber);">--</span> <span style="font-size: 0.9rem;">°C</span></div>
+            <div class="sensor-sub">Kompensasi Aktif</div>
           </div>
         </div>
 
-        <div class="control-group" style="margin-bottom: 0;">
-          <h4>Target Minimal pH</h4>
-          <div class="input-row">
-            <input type="number" id="input-target-ph" step="0.1" placeholder="5.8">
-            <button class="secondary-btn" id="btn-save-ph" style="width: 100px;">Simpan</button>
+        <div class="chart-box">
+          <div class="chart-head">
+            <span>Tren Pembacaan Sensor Real-Time</span>
+            <span id="log-counter">Data Terekam: 0 sampel</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="sensorChart"></canvas>
           </div>
         </div>
-      </div>
+      </section>
 
-      <!-- Card Kontrol Pompa -->
-      <div class="card">
-        <h2>🎛️ Panel Kontrol Pompa</h2>
-        <hr style="border: 0.5px solid var(--border); margin: 12px 0;">
-        
-        <button id="btn-mode" class="secondary-btn" style="margin-bottom: 16px;">Mode: Memuat...</button>
-
-        <div class="control-group">
-          <h4>🧪 Pompa Nutrisi (EC)</h4>
-          <span class="status-badge">Status: <span id="teks-pompa-ec">Memuat...</span></span>
-          <button id="btn-pompa-ec">Nyalakan Pompa EC</button>
+      <!-- PANEL KANAN: KONTROL 3 POMPA & TARGET RENTANG -->
+      <section class="bubble-card panel">
+        <div class="panel-header">
+          <h2 class="panel-title">🎛️ Kontrol Pompa Dosing 3 Kanal</h2>
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;" id="txt-mode">Otomasi Dosing</span>
+            <label class="switch" title="Aktifkan/Matikan Mode Otomatis">
+              <input type="checkbox" id="toggle-mode" checked>
+              <span class="slider"></span>
+            </label>
+          </div>
         </div>
 
-        <div class="control-group" style="margin-bottom: 0;">
-          <h4>💧 Pompa Larutan pH</h4>
-          <span class="status-badge">Status: <span id="teks-pompa-ph">Memuat...</span></span>
-          <button id="btn-pompa-ph">Nyalakan Pompa pH</button>
-        </div>
-      </div>
+        <!-- 3 KARTU POMPA (A, B, dan C/pH) -->
+        <div class="relay-grid">
+          <!-- POMPA A -->
+          <div class="bubble-card relay-card" id="card-a">
+            <div>
+              <div class="relay-top">
+                <div class="relay-icon">🅰️</div>
+                <span class="kanal-tag">POMPA A</span>
+              </div>
+              <div class="relay-name">Nutrisi Pekatan A</div>
+              <span class="priority-tag">🧪 KALSIUM & N</span>
+            </div>
+            <div class="relay-footer">
+              <div class="status-dot-wrap">
+                <span class="dot" id="dot-a"></span>
+                <span id="status-txt-a">Mati</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-a" disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
 
-      <!-- Card Download CSV -->
-      <div class="card">
-        <h2>📥 Ekspor Data Log</h2>
-        <hr style="border: 0.5px solid var(--border); margin: 12px 0;">
-        <p style="font-size: 0.85rem; color: #94a3b8; margin-bottom: 15px;">Unduh seluruh rekaman data sensor beserta timestamp waktunya ke format CSV.</p>
-        <button class="download-btn" id="btn-download">Download CSV</button>
-      </div>
+          <!-- POMPA B -->
+          <div class="bubble-card relay-card" id="card-b">
+            <div>
+              <div class="relay-top">
+                <div class="relay-icon">🅱️</div>
+                <span class="kanal-tag">POMPA B</span>
+              </div>
+              <div class="relay-name">Nutrisi Pekatan B</div>
+              <span class="priority-tag">🌿 FOSFAT & MIKRO</span>
+            </div>
+            <div class="relay-footer">
+              <div class="status-dot-wrap">
+                <span class="dot" id="dot-b"></span>
+                <span id="status-txt-b">Mati</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-b" disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- POMPA C (PH) -->
+          <div class="bubble-card relay-card" id="card-ph">
+            <div>
+              <div class="relay-top">
+                <div class="relay-icon">💧</div>
+                <span class="kanal-tag">POMPA C</span>
+              </div>
+              <div class="relay-name">Penstabil pH</div>
+              <span class="priority-tag" style="color: var(--accent-amber); background: rgba(245,158,11,0.15);">⚖️ BUFFER PH</span>
+            </div>
+            <div class="relay-footer">
+              <div class="status-dot-wrap">
+                <span class="dot" id="dot-ph"></span>
+                <span id="status-txt-ph">Mati</span>
+              </div>
+              <label class="switch">
+                <input type="checkbox" id="toggle-ph" disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- PENGATURAN RENTANG MIN & MAX PAKCOY -->
+        <div class="bubble-card target-card">
+          <div style="display: flex; justify-content: space-between; align-items: center;">
+            <span style="font-size: 0.82rem; font-weight: 700;">⚙️ Kalibrasi Batas Min & Max Pakcoy</span>
+            <span style="font-size: 0.68rem; color: var(--text-muted);">Rekomendasi: 1000–1200 ppm | pH 5.8–6.2</span>
+          </div>
+
+          <div class="target-grid">
+            <!-- Rentang PPM -->
+            <div class="range-box">
+              <div class="range-box-title"><span>Rentang Nutrisi (ppm)</span></div>
+              <div class="dual-inputs">
+                <div class="mini-field">
+                  <label>Min (Pompa ON)</label>
+                  <input type="number" id="in-min-ec" step="50" value="1000">
+                </div>
+                <div class="mini-field">
+                  <label>Max (Batas Atas)</label>
+                  <input type="number" id="in-max-ec" step="50" value="1200">
+                </div>
+              </div>
+              <button class="btn-save-range" id="btn-save-ec">Simpan Rentang PPM</button>
+            </div>
+
+            <!-- Rentang pH -->
+            <div class="range-box">
+              <div class="range-box-title"><span>Rentang Kadar pH</span></div>
+              <div class="dual-inputs">
+                <div class="mini-field">
+                  <label>Min pH</label>
+                  <input type="number" id="in-min-ph" step="0.1" value="5.8">
+                </div>
+                <div class="mini-field">
+                  <label>Max pH</label>
+                  <input type="number" id="in-max-ph" step="0.1" value="6.2">
+                </div>
+              </div>
+              <button class="btn-save-range" id="btn-save-ph">Simpan Rentang pH</button>
+            </div>
+          </div>
+        </div>
+      </section>
 
     </div>
+
+    <!-- BANNER EKSPOR DATA CSV -->
+    <footer class="bubble-card bottom-banner">
+      <div class="banner-info">
+        <div class="banner-icon">📊</div>
+        <div class="banner-text">
+          <h4>Ekspor Riwayat Data Sensor (CSV)</h4>
+          <p>Unduh seluruh rekaman pembacaan pH, kepekatan nutrisi (ppm), dan suhu air lengkap dengan waktu pencatatannya.</p>
+        </div>
+      </div>
+      <button class="btn-action" id="btn-download">📥 Unduh CSV</button>
+    </footer>
   </div>
 
+  <!-- SCRIPT INTERAKSI UI & FIREBASE -->
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
 
+    // ================= 1. KONFIGURASI FIREBASE =================
     const firebaseConfig = {
       apiKey: "PASTE_WEB_API_KEY_DISINI",
       databaseURL: "PASTE_DATABASE_URL_DISINI"
@@ -144,155 +424,181 @@
     const app = initializeApp(firebaseConfig);
     const db = getDatabase(app);
 
-    let historyData = [];
+    // ================= 2. EFEK KURSOR BUBBLE & TEMA =================
+    document.querySelectorAll('.bubble-card').forEach(card => {
+      card.addEventListener('mousemove', e => {
+        const rect = card.getBoundingClientRect();
+        card.style.setProperty('--x', `${e.clientX - rect.left}px`);
+        card.style.setProperty('--y', `${e.clientY - rect.top}px`);
+      });
+    });
 
-    // Inisialisasi Grafik Chart.js
+    const htmlEl = document.documentElement;
+    const btnTheme = document.getElementById('btn-theme');
+    btnTheme.addEventListener('click', () => {
+      const isDark = htmlEl.getAttribute('data-theme') === 'dark';
+      htmlEl.setAttribute('data-theme', isDark ? 'light' : 'dark');
+      btnTheme.innerText = isDark ? '🌙' : '☀️';
+    });
+
+    // ================= 3. JAM & TANGGAL REAL-TIME (WIB) =================
+    function updateClock() {
+      const now = new Date();
+      const opsiTanggal = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      document.getElementById('rt-date').innerText = now.toLocaleDateString('id-ID', opsiTanggal).toUpperCase();
+      document.getElementById('rt-time').innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ================= 4. GRAFIK CHART.JS (DUAL Y-AXIS) =================
+    let historyData = [];
     const ctx = document.getElementById('sensorChart').getContext('2d');
     const sensorChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: [],
         datasets: [
-          { label: 'pH', borderColor: '#38bdf8', data: [], tension: 0.2 },
-          { label: 'EC (mS/cm)', borderColor: '#22c55e', data: [], tension: 0.2 },
-          { label: 'Suhu (°C)', borderColor: '#f59e0b', data: [], tension: 0.2 }
+          { label: 'pH', borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.1)', fill: true, data: [], tension: 0.35, pointRadius: 2, yAxisID: 'y' },
+          { label: 'Nutrisi (ppm)', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, data: [], tension: 0.35, pointRadius: 2, yAxisID: 'y1' },
+          { label: 'Suhu (°C)', borderColor: '#f59e0b', data: [], tension: 0.35, pointRadius: 2, yAxisID: 'y' }
         ]
       },
       options: {
         responsive: true,
         maintainAspectRatio: false,
+        plugins: { legend: { labels: { color: '#8b9bb4', boxWidth: 12, font: { size: 11 } } } },
         scales: {
-          x: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } },
-          y: { ticks: { color: '#94a3b8' }, grid: { color: '#334155' } }
+          x: { ticks: { color: '#8b9bb4', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.1)' } },
+          y: { type: 'linear', position: 'left', ticks: { color: '#8b9bb4', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.1)' } },
+          y1: { type: 'linear', position: 'right', ticks: { color: '#10b981', font: { size: 10 } }, grid: { drawOnChartArea: false } }
         }
       }
     });
 
-    // 1. Membaca Data Sensor Real-Time & Masukkan ke Riwayat CSV
-    onValue(ref(db, 'monitoring'), (snapshot) => {
-      const data = snapshot.val();
-      if (!data) return;
+    // ================= 5. SINKRONISASI SENSOR & EVALUASI RENTANG PAKCOY =================
+    let minEc = 1000, maxEc = 1200, minPh = 5.8, maxPh = 6.2;
 
-      const ph = data.ph !== undefined ? Number(data.ph).toFixed(2) : 0;
-      const ec = data.ec !== undefined ? Number(data.ec).toFixed(2) : 0;
-      const suhu = data.suhu !== undefined ? Number(data.suhu).toFixed(2) : 0;
-      const timeStr = new Date().toLocaleTimeString('id-ID');
+    onValue(ref(db, 'monitoring'), (snapshot) => {
+      const d = snapshot.val();
+      if (!d) return;
+
+      const ph = d.ph !== undefined ? Number(d.ph).toFixed(2) : 0;
+      const ec = d.ec !== undefined ? Math.round(Number(d.ec)) : 0;
+      const suhu = d.suhu !== undefined ? Number(d.suhu).toFixed(1) : 0;
+
+      const now = new Date();
+      const tanggalWaktu = `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID', { hour12: false })}`;
+      const jamSaja = now.toLocaleTimeString('id-ID', { hour12: false });
 
       document.getElementById('val-ph').innerText = ph;
       document.getElementById('val-ec').innerText = ec;
       document.getElementById('val-suhu').innerText = suhu;
 
-      // Simpan ke array history untuk grafik & download CSV
-      historyData.push({ time: timeStr, ph: ph, ec: ec, suhu: suhu });
+      const badge = document.getElementById('overall-badge');
+      if (ec < minEc || ph < minPh) {
+        badge.innerText = "● KURANG (DOSING AKTIF)";
+        badge.className = "badge-pill warn";
+      } else if (ec > maxEc || ph > maxPh) {
+        badge.innerText = "● MELEBIHI BATAS MAKSIMAL";
+        badge.className = "badge-pill danger";
+      } else {
+        badge.innerText = "● RENTANG IDEAL PAKCOY";
+        badge.className = "badge-pill";
+      }
 
-      // Batasi tampilan grafik max 20 data terakhir agar tetap rapi
-      const recentData = historyData.slice(-20);
-      sensorChart.data.labels = recentData.map(d => d.time);
-      sensorChart.data.datasets[0].data = recentData.map(d => d.ph);
-      sensorChart.data.datasets[1].data = recentData.map(d => d.ec);
-      sensorChart.data.datasets[2].data = recentData.map(d => d.suhu);
+      historyData.push({ fullTime: tanggalWaktu, time: jamSaja, ph, ec, suhu });
+      document.getElementById('log-counter').innerText = `Data Terekam: ${historyData.length} sampel`;
+
+      const recent = historyData.slice(-15);
+      sensorChart.data.labels = recent.map(i => i.time);
+      sensorChart.data.datasets[0].data = recent.map(i => i.ph);
+      sensorChart.data.datasets[1].data = recent.map(i => i.ec);
+      sensorChart.data.datasets[2].data = recent.map(i => i.suhu);
       sensorChart.update();
     });
 
-    // 2. Sinkronisasi Form Input Target EC & pH dari Firebase
-    onValue(ref(db, 'setting/target_ec'), (snapshot) => {
-      if (snapshot.exists()) {
-        document.getElementById('input-target-ec').value = snapshot.val();
-      }
+    // ================= 6. KONTROL MODE & 3 POMPA (A, B, PH) =================
+    const toggleMode = document.getElementById('toggle-mode');
+    const toggleA  = document.getElementById('toggle-a');
+    const toggleB  = document.getElementById('toggle-b');
+    const togglePh = document.getElementById('toggle-ph');
+
+    function updatePumpUI(prefix, isOn) {
+      document.getElementById(`toggle-${prefix}`).checked = isOn;
+      document.getElementById(`dot-${prefix}`).className = isOn ? "dot on" : "dot";
+      const txt = document.getElementById(`status-txt-${prefix}`);
+      txt.innerText = isOn ? "Menyala" : "Mati";
+      txt.style.color = isOn ? "var(--accent-green)" : "var(--text-muted)";
+      document.getElementById(`card-${prefix}`).className = isOn ? "bubble-card relay-card active-glow" : "bubble-card relay-card";
+    }
+
+    onValue(ref(db, 'kontrol'), (snap) => {
+      const k = snap.val() || {};
+      const isAuto = k.otomatis !== undefined ? Boolean(k.otomatis) : true;
+      toggleMode.checked = isAuto;
+      document.getElementById('txt-mode').innerText = isAuto ? "Otomasi Dosing" : "Mode Manual";
+      
+      toggleA.disabled = isAuto;
+      toggleB.disabled = isAuto;
+      togglePh.disabled = isAuto;
+
+      updatePumpUI('a', Boolean(k.pompa_a));
+      updatePumpUI('b', Boolean(k.pompa_b));
+      updatePumpUI('ph', Boolean(k.pompa_ph));
     });
 
-    onValue(ref(db, 'setting/target_ph'), (snapshot) => {
-      if (snapshot.exists()) {
-        document.getElementById('input-target-ph').value = snapshot.val();
-      }
+    toggleMode.addEventListener('change', (e) => set(ref(db, 'kontrol/otomatis'), e.target.checked));
+    toggleA.addEventListener('change', (e) => { if (!toggleMode.checked) set(ref(db, 'kontrol/pompa_a'), e.target.checked); });
+    toggleB.addEventListener('change', (e) => { if (!toggleMode.checked) set(ref(db, 'kontrol/pompa_b'), e.target.checked); });
+    togglePh.addEventListener('change', (e) => { if (!toggleMode.checked) set(ref(db, 'kontrol/pompa_ph'), e.target.checked); });
+
+    // ================= 7. PENGATURAN RENTANG MIN & MAX =================
+    onValue(ref(db, 'setting'), (snap) => {
+      const s = snap.val();
+      if (!s) return;
+      if (s.min_ec !== undefined) { minEc = Number(s.min_ec); document.getElementById('in-min-ec').value = minEc; }
+      if (s.max_ec !== undefined) { maxEc = Number(s.max_ec); document.getElementById('in-max-ec').value = maxEc; }
+      if (s.min_ph !== undefined) { minPh = Number(s.min_ph); document.getElementById('in-min-ph').value = minPh; }
+      if (s.max_ph !== undefined) { maxPh = Number(s.max_ph); document.getElementById('in-max-ph').value = maxPh; }
+
+      document.getElementById('lbl-range-ec').innerText = `${minEc} - ${maxEc}`;
+      document.getElementById('lbl-range-ph').innerText = `${minPh.toFixed(1)} - ${maxPh.toFixed(1)}`;
     });
 
-    // Tombol Simpan Target EC ke Firebase
     document.getElementById('btn-save-ec').addEventListener('click', () => {
-      let val = parseFloat(document.getElementById('input-target-ec').value);
-      if (!isNaN(val)) {
-        set(ref(db, 'setting/target_ec'), val)
-          .then(() => alert("Target EC berhasil diperbarui ke Firebase!"))
-          .catch((err) => alert("Gagal: " + err.message));
+      const minV = parseFloat(document.getElementById('in-min-ec').value);
+      const maxV = parseFloat(document.getElementById('in-max-ec').value);
+      if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
+        update(ref(db, 'setting'), { min_ec: minV, max_ec: maxV });
+      } else {
+        alert("Pastikan nilai Minimal PPM lebih kecil dari Maksimal PPM!");
       }
     });
 
-    // Tombol Simpan Target pH ke Firebase
     document.getElementById('btn-save-ph').addEventListener('click', () => {
-      let val = parseFloat(document.getElementById('input-target-ph').value);
-      if (!isNaN(val)) {
-        set(ref(db, 'setting/target_ph'), val)
-          .then(() => alert("Target pH berhasil diperbarui ke Firebase!"))
-          .catch((err) => alert("Gagal: " + err.message));
+      const minV = parseFloat(document.getElementById('in-min-ph').value);
+      const maxV = parseFloat(document.getElementById('in-max-ph').value);
+      if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
+        update(ref(db, 'setting'), { min_ph: minV, max_ph: maxV });
+      } else {
+        alert("Pastikan nilai Minimal pH lebih kecil dari Maksimal pH!");
       }
     });
 
-    // 3. Kontrol Mode Otomatis / Manual
-    const modeRef = ref(db, 'kontrol/otomatis');
-    let modeOtomatis = true;
-    const btnMode = document.getElementById('btn-mode');
-    const btnPompaEc = document.getElementById('btn-pompa-ec');
-    const btnPompaPh = document.getElementById('btn-pompa-ph');
-
-    onValue(modeRef, (snapshot) => {
-      modeOtomatis = snapshot.val() !== null ? Boolean(snapshot.val()) : true;
-      btnMode.innerText = modeOtomatis ? "🤖 Mode: OTOMATIS (Klik ke Manual)" : "🖐️ Mode: MANUAL (Klik ke Otomatis)";
-      btnMode.style.background = modeOtomatis ? "#0ea5e9" : "#f59e0b";
-
-      [btnPompaEc, btnPompaPh].forEach(btn => {
-        btn.disabled = modeOtomatis;
-        btn.style.opacity = modeOtomatis ? "0.45" : "1";
-        btn.style.cursor = modeOtomatis ? "not-allowed" : "pointer";
-      });
-    });
-
-    btnMode.addEventListener('click', () => set(modeRef, !modeOtomatis));
-
-    // 4. Kontrol Pompa EC & pH
-    const pompaEcRef = ref(db, 'kontrol/pompa_ec');
-    const pompaPhRef = ref(db, 'kontrol/pompa_ph');
-
-    onValue(pompaEcRef, (snapshot) => {
-      let status = Boolean(snapshot.val());
-      let badge = document.getElementById('teks-pompa-ec');
-      badge.innerText = status ? "MENYALA (ON)" : "MATI (OFF)";
-      badge.style.color = status ? "#22c55e" : "#ef4444";
-      btnPompaEc.innerText = status ? "Matikan Pompa EC" : "Nyalakan Pompa EC";
-      btnPompaEc.className = status ? "off" : "";
-    });
-
-    btnPompaEc.addEventListener('click', () => {
-      if (!modeOtomatis) set(pompaEcRef, !Boolean(document.getElementById('teks-pompa-ec').innerText.includes("ON")));
-    });
-
-    onValue(pompaPhRef, (snapshot) => {
-      let status = Boolean(snapshot.val());
-      let badge = document.getElementById('teks-pompa-ph');
-      badge.innerText = status ? "MENYALA (ON)" : "MATI (OFF)";
-      badge.style.color = status ? "#22c55e" : "#ef4444";
-      btnPompaPh.innerText = status ? "Matikan Pompa pH" : "Nyalakan Pompa pH";
-      btnPompaPh.className = status ? "off" : "";
-    });
-
-    btnPompaPh.addEventListener('click', () => {
-      if (!modeOtomatis) set(pompaPhRef, !Boolean(document.getElementById('teks-pompa-ph').innerText.includes("ON")));
-    });
-
-    // 5. Fitur Download CSV Lengkap dengan Timestamp Waktu
+    // ================= 8. UNDUH CSV =================
     document.getElementById('btn-download').addEventListener('click', () => {
       if (historyData.length === 0) {
-        alert("Belum ada data sensor yang terekam!");
+        alert("Belum ada data sensor yang masuk untuk diunduh.");
         return;
       }
-      let csvContent = "data:text/csv;charset=utf-8,Waktu,pH,EC (mS/cm),Suhu (C)\n";
-      historyData.forEach(row => {
-        csvContent += `${row.time},${row.ph},${row.ec},${row.suhu}\n`;
+      let csv = "data:text/csv;charset=utf-8,Tanggal & Waktu,pH,TDS/EC (ppm),Suhu (C)\n";
+      historyData.forEach(r => {
+        csv += `"${r.fullTime}",${r.ph},${r.ec},${r.suhu}\n`;
       });
-      
-      const encodedUri = encodeURI(csvContent);
       const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", "log_sensor_hidroponik.csv");
+      link.setAttribute("href", encodeURI(csv));
+      link.setAttribute("download", `Log_Pakcoy_${new Date().toISOString().slice(0,10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
