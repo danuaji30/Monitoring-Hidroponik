@@ -97,13 +97,16 @@
     .clock-date { font-size: 0.68rem; font-weight: 700; color: var(--accent-blue); text-transform: uppercase; letter-spacing: 0.05em; }
     .clock-time { font-family: 'JetBrains Mono', monospace; font-size: 0.95rem; font-weight: 700; margin-top: 1px; }
 
-    .theme-btn {
-      width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--border);
+    .theme-btn, .auth-btn {
+      height: 40px; border-radius: 10px; border: 1px solid var(--border);
       background: var(--bg-card); color: var(--text-main); cursor: pointer; font-size: 1.15rem;
       display: flex; align-items: center; justify-content: center;
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .theme-btn:hover { transform: scale(1.1) rotate(12deg); border-color: var(--accent-blue); }
+    .theme-btn { width: 40px; }
+    .auth-btn { padding: 0 14px; font-size: 0.78rem; font-weight: 600; gap: 6px; }
+    .theme-btn:hover, .auth-btn:hover { transform: scale(1.05); border-color: var(--accent-blue); }
+    .auth-btn.logged-in { border-color: var(--accent-green); color: var(--accent-green); }
 
     /* GRID UTAMA 2 KOLOM */
     .main-grid { display: grid; grid-template-columns: 1.1fr 1fr; gap: 18px; }
@@ -180,7 +183,7 @@
     .range-box-title { font-size: 0.72rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px; display: flex; justify-content: space-between; }
     .dual-inputs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 8px; }
     .mini-field label { display: block; font-size: 0.63rem; color: var(--text-muted); margin-bottom: 3px; }
-    .mini-field input {
+    .mini-field input, .mini-field select {
       width: 100%; background: var(--bg-input); border: 1px solid var(--border);
       color: var(--text-main); border-radius: 6px; padding: 5px 7px;
       font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; text-align: center;
@@ -190,8 +193,94 @@
       border-radius: 7px; padding: 6px; font-size: 0.73rem; font-weight: 600; cursor: pointer;
     }
     .btn-save-range:hover { opacity: 0.92; }
+    .btn-save-range:disabled { opacity: 0.4; cursor: not-allowed; }
 
-    /* BANNER BAWAH EKSPOR CSV */
+    /* PANEL JADWAL POMPA */
+    .schedule-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; }
+    .schedule-form { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: end; margin-top: 10px; }
+    @media (max-width: 580px) { .schedule-form { grid-template-columns: 1fr 1fr; } }
+    .schedule-form .mini-field input[type="time"] { text-align: center; }
+
+    .checkbox-group { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; }
+    .checkbox-group label {
+      display: flex; align-items: center; gap: 4px;
+      font-size: 0.72rem; font-weight: 600; color: var(--text-muted); cursor: pointer;
+    }
+    .checkbox-group input[type="checkbox"] { accent-color: var(--accent-blue); width: 14px; height: 14px; }
+
+    .btn-add-schedule {
+      background: var(--accent-green); color: #fff; border: none;
+      border-radius: 7px; padding: 7px 14px; font-size: 0.76rem; font-weight: 700; cursor: pointer;
+      white-space: nowrap;
+    }
+    .btn-add-schedule:hover { opacity: 0.9; }
+    .btn-add-schedule:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    .schedule-list { margin-top: 12px; display: flex; flex-direction: column; gap: 6px; }
+    .schedule-entry {
+      display: flex; justify-content: space-between; align-items: center;
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 8px;
+      padding: 8px 12px; font-size: 0.78rem;
+    }
+    .schedule-entry .time-label {
+      font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.88rem;
+      color: var(--accent-blue);
+    }
+    .schedule-entry .pumps-label { font-weight: 600; color: var(--text-muted); }
+    .schedule-entry .duration-label { font-size: 0.72rem; color: var(--text-muted); }
+    .btn-del-schedule {
+      background: rgba(239, 68, 68, 0.15); color: var(--accent-red); border: 1px solid rgba(239, 68, 68, 0.3);
+      border-radius: 6px; padding: 4px 10px; font-size: 0.7rem; font-weight: 700; cursor: pointer;
+    }
+    .btn-del-schedule:hover { background: rgba(239, 68, 68, 0.3); }
+    .schedule-empty { text-align: center; padding: 16px; color: var(--text-muted); font-size: 0.8rem; }
+
+    /* ADMIN LOCK OVERLAY */
+    .admin-only { position: relative; }
+    .admin-only.locked::after {
+      content: "🔒 Admin feature";
+      position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(9, 13, 22, 0.7); backdrop-filter: blur(2px);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 0.8rem; font-weight: 600; color: var(--text-muted);
+      border-radius: 14px; z-index: 10; cursor: not-allowed;
+    }
+    [data-theme="light"] .admin-only.locked::after {
+      background: rgba(241, 245, 249, 0.8);
+    }
+
+    /* LOGIN MODAL */
+    .modal-overlay {
+      display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.6); backdrop-filter: blur(4px);
+      z-index: 1000; align-items: center; justify-content: center;
+    }
+    .modal-overlay.show { display: flex; }
+    .modal-box {
+      background: var(--bg-panel); border: 1px solid var(--border); border-radius: 16px;
+      padding: 28px; width: 90%; max-width: 380px; box-shadow: var(--shadow);
+    }
+    .modal-box h3 { margin: 0 0 6px; font-size: 1.05rem; }
+    .modal-box p { margin: 0 0 18px; font-size: 0.78rem; color: var(--text-muted); }
+    .modal-field { margin-bottom: 12px; }
+    .modal-field label { display: block; font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 5px; }
+    .modal-field input {
+      width: 100%; padding: 9px 12px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--bg-input); color: var(--text-main);
+      font-size: 0.88rem;
+    }
+    .modal-actions { display: flex; gap: 8px; margin-top: 18px; }
+    .btn-modal-primary {
+      flex: 1; padding: 10px; border-radius: 9px; font-size: 0.85rem; font-weight: 700;
+      border: none; cursor: pointer; background: var(--accent-blue); color: white;
+    }
+    .btn-modal-secondary {
+      flex: 1; padding: 10px; border-radius: 9px; font-size: 0.85rem; font-weight: 700;
+      border: 1px solid var(--border); cursor: pointer; background: var(--bg-card); color: var(--text-main);
+    }
+    .modal-error { color: var(--accent-red); font-size: 0.75rem; margin-top: 8px; display: none; }
+
+    /* BANNER EKSPOR DATA CSV */
     .bottom-banner { display: flex; justify-content: space-between; align-items: center; padding: 14px 22px; gap: 16px; flex-wrap: wrap; }
     .banner-info { display: flex; align-items: center; gap: 14px; }
     .banner-icon { width: 38px; height: 38px; border-radius: 10px; background: rgba(59, 130, 246, 0.15); color: var(--accent-blue); display: flex; align-items: center; justify-content: center; font-size: 1.1rem; }
@@ -205,6 +294,7 @@
       transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
     .btn-action:hover { transform: scale(1.05); }
+    .download-btns { display: flex; gap: 8px; flex-wrap: wrap; }
   </style>
 </head>
 <body>
@@ -225,6 +315,7 @@
           <div class="clock-date" id="rt-date">SABTU, 31 OKTOBER 2026</div>
           <div class="clock-time"><span id="rt-time">00:00:00</span> WIB</div>
         </div>
+        <button class="auth-btn" id="btn-auth" title="Login Admin">🔑 Login Admin</button>
         <button class="theme-btn" id="btn-theme" title="Ubah Tema Terang / Gelap">☀️</button>
       </div>
     </header>
@@ -274,10 +365,10 @@
       <section class="bubble-card panel">
         <div class="panel-header">
           <h2 class="panel-title">🎛️ Kontrol Pompa Dosing 3 Kanal</h2>
-          <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="admin-only locked" id="mode-toggle-wrap" style="display: flex; align-items: center; gap: 8px; border-radius: 8px; padding: 2px 4px;">
             <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;" id="txt-mode">Otomasi Dosing</span>
             <label class="switch" title="Aktifkan/Matikan Mode Otomatis">
-              <input type="checkbox" id="toggle-mode" checked>
+              <input type="checkbox" id="toggle-mode" checked disabled>
               <span class="slider"></span>
             </label>
           </div>
@@ -292,15 +383,15 @@
                 <div class="relay-icon">🅰️</div>
                 <span class="kanal-tag">POMPA A</span>
               </div>
-              <div class="relay-name">Nutrisi Pekatan A</div>
-              <span class="priority-tag">🧪 KALSIUM & N</span>
+              <div class="relay-name">Nutrisi A</div>
+              <span class="priority-tag">🧪</span>
             </div>
             <div class="relay-footer">
               <div class="status-dot-wrap">
                 <span class="dot" id="dot-a"></span>
                 <span id="status-txt-a">Mati</span>
               </div>
-              <label class="switch">
+              <label class="switch admin-only locked" id="switch-wrap-a">
                 <input type="checkbox" id="toggle-a" disabled>
                 <span class="slider"></span>
               </label>
@@ -314,15 +405,15 @@
                 <div class="relay-icon">🅱️</div>
                 <span class="kanal-tag">POMPA B</span>
               </div>
-              <div class="relay-name">Nutrisi Pekatan B</div>
-              <span class="priority-tag">🌿 FOSFAT & MIKRO</span>
+              <div class="relay-name">Nutrisi B</div>
+              <span class="priority-tag">🌿</span>
             </div>
             <div class="relay-footer">
               <div class="status-dot-wrap">
                 <span class="dot" id="dot-b"></span>
                 <span id="status-txt-b">Mati</span>
               </div>
-              <label class="switch">
+              <label class="switch admin-only locked" id="switch-wrap-b">
                 <input type="checkbox" id="toggle-b" disabled>
                 <span class="slider"></span>
               </label>
@@ -344,7 +435,7 @@
                 <span class="dot" id="dot-ph"></span>
                 <span id="status-txt-ph">Mati</span>
               </div>
-              <label class="switch">
+              <label class="switch admin-only locked" id="switch-wrap-ph">
                 <input type="checkbox" id="toggle-ph" disabled>
                 <span class="slider"></span>
               </label>
@@ -353,8 +444,8 @@
         </div>
 
         <!-- PENGATURAN RENTANG MIN & MAX PAKCOY -->
-        <div class="bubble-card target-card">
-          <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div class="bubble-card target-card admin-only locked" id="target-settings">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
             <span style="font-size: 0.82rem; font-weight: 700;">⚙️ Kalibrasi Batas Min & Max Pakcoy</span>
             <span style="font-size: 0.68rem; color: var(--text-muted);">Rekomendasi: 1000–1200 ppm | pH 5.8–6.2</span>
           </div>
@@ -393,6 +484,38 @@
             </div>
           </div>
         </div>
+
+        <!-- JADWAL POMPA OTOMATIS -->
+        <div class="bubble-card schedule-card admin-only locked" id="schedule-settings">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 6px;">
+            <span style="font-size: 0.82rem; font-weight: 700;">⏰ Jadwal Nyala Pompa</span>
+            <span style="font-size: 0.68rem; color: var(--text-muted);">Atur waktu & pompa yang aktif</span>
+          </div>
+
+          <div class="schedule-form" id="schedule-form">
+            <div class="mini-field">
+              <label>Waktu (Jam:Menit:Detik)</label>
+              <input type="time" id="sched-time" step="1" value="08:00:00">
+            </div>
+            <div class="mini-field">
+              <label>Durasi Nyala (detik)</label>
+              <input type="number" id="sched-duration" min="1" max="600" value="30" step="1">
+            </div>
+            <div class="mini-field">
+              <label>Pompa yang Aktif</label>
+              <div class="checkbox-group" style="margin-top: 4px;">
+                <label><input type="checkbox" id="sched-pa" checked> A</label>
+                <label><input type="checkbox" id="sched-pb" checked> B</label>
+                <label><input type="checkbox" id="sched-pc"> pH</label>
+              </div>
+            </div>
+            <button class="btn-add-schedule" id="btn-add-schedule">➕ Tambah</button>
+          </div>
+
+          <div class="schedule-list" id="schedule-list">
+            <div class="schedule-empty">Belum ada jadwal pompa.</div>
+          </div>
+        </div>
       </section>
 
     </div>
@@ -402,56 +525,229 @@
       <div class="banner-info">
         <div class="banner-icon">📊</div>
         <div class="banner-text">
-          <h4>Ekspor Riwayat Data Sensor (CSV)</h4>
-          <p>Unduh seluruh rekaman pembacaan pH, kepekatan nutrisi (ppm), dan suhu air lengkap dengan waktu pencatatannya.</p>
+          <h4>Ekspor Riwayat Data Sensor & Jadwal (CSV)</h4>
+          <p>Unduh rekaman pembacaan sensor dan daftar jadwal pompa otomatis.</p>
         </div>
       </div>
-      <button class="btn-action" id="btn-download">📥 Unduh CSV</button>
+      <div class="download-btns">
+        <button class="btn-action" id="btn-download">📥 Unduh CSV Sensor</button>
+        <button class="btn-action" id="btn-download-schedule" style="background: var(--accent-green);">📥 Unduh CSV Jadwal</button>
+      </div>
     </footer>
   </div>
 
-  <!-- SCRIPT INTERAKSI UI & FIREBASE -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getDatabase, ref, onValue, set, update } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+  <!-- MODAL LOGIN ADMIN -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal-box">
+      <h3>🔐 Login Admin HydroSmart</h3>
+      <p>Masukkan email & password admin untuk mengakses kontrol penuh.</p>
+      <div class="modal-field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="admin@email.com">
+      </div>
+      <div class="modal-field">
+        <label>Password</label>
+        <input type="password" id="login-pass" placeholder="••••••••">
+      </div>
+      <div class="modal-error" id="login-error">Email atau password salah.</div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="btn-login-cancel">Batal</button>
+        <button class="btn-modal-primary" id="btn-login-submit">🔓 Masuk</button>
+      </div>
+    </div>
+  </div>
 
-    // ================= 1. KONFIGURASI FIREBASE =================
-    const firebaseConfig = {
-      apiKey: "PASTE_WEB_API_KEY_DISINI",
-      databaseURL: "PASTE_DATABASE_URL_DISINI"
-    };
-
-    const app = initializeApp(firebaseConfig);
-    const db = getDatabase(app);
-
-    // ================= 2. EFEK KURSOR BUBBLE & TEMA =================
-    document.querySelectorAll('.bubble-card').forEach(card => {
-      card.addEventListener('mousemove', e => {
-        const rect = card.getBoundingClientRect();
-        card.style.setProperty('--x', `${e.clientX - rect.left}px`);
-        card.style.setProperty('--y', `${e.clientY - rect.top}px`);
+  <!-- ============================================================== -->
+  <!-- SCRIPT 1: UI MURNI (Tema, Jam, Bubble) — TANPA FIREBASE        -->
+  <!-- Dipisah agar SELALU jalan meskipun Firebase belum dikonfigurasi -->
+  <!-- ============================================================== -->
+  <script>
+    // ---- EFEK KURSOR BUBBLE ----
+    document.querySelectorAll('.bubble-card').forEach(function(card) {
+      card.addEventListener('mousemove', function(e) {
+        var rect = card.getBoundingClientRect();
+        card.style.setProperty('--x', (e.clientX - rect.left) + 'px');
+        card.style.setProperty('--y', (e.clientY - rect.top) + 'px');
       });
     });
 
-    const htmlEl = document.documentElement;
-    const btnTheme = document.getElementById('btn-theme');
-    btnTheme.addEventListener('click', () => {
-      const isDark = htmlEl.getAttribute('data-theme') === 'dark';
-      htmlEl.setAttribute('data-theme', isDark ? 'light' : 'dark');
-      btnTheme.innerText = isDark ? '🌙' : '☀️';
+    // ---- TOGGLE TEMA GELAP / TERANG ----
+    var htmlEl = document.documentElement;
+    var btnTheme = document.getElementById('btn-theme');
+    btnTheme.addEventListener('click', function() {
+      var current = htmlEl.getAttribute('data-theme');
+      if (current === 'dark') {
+        htmlEl.setAttribute('data-theme', 'light');
+        btnTheme.innerText = '🌙';
+      } else {
+        htmlEl.setAttribute('data-theme', 'dark');
+        btnTheme.innerText = '☀️';
+      }
     });
 
-    // ================= 3. JAM & TANGGAL REAL-TIME (WIB) =================
+    // ---- JAM & TANGGAL REAL-TIME (WIB) ----
     function updateClock() {
-      const now = new Date();
-      const opsiTanggal = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+      var now = new Date();
+      var opsiTanggal = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Jakarta' };
+      var opsiJam = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Asia/Jakarta' };
       document.getElementById('rt-date').innerText = now.toLocaleDateString('id-ID', opsiTanggal).toUpperCase();
-      document.getElementById('rt-time').innerText = now.toLocaleTimeString('id-ID', { hour12: false });
+      document.getElementById('rt-time').innerText = now.toLocaleTimeString('id-ID', opsiJam);
     }
     setInterval(updateClock, 1000);
     updateClock();
+  </script>
 
-    // ================= 4. GRAFIK CHART.JS (DUAL Y-AXIS) =================
+  <!-- ============================================================== -->
+  <!-- SCRIPT 2: FIREBASE + LOGIKA KONTROL (Module)                    -->
+  <!-- ============================================================== -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getDatabase, ref, onValue, set, update, push, remove } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-database.js";
+    import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+    // ================= 1. KONFIGURASI FIREBASE =================
+    // ⚠️ GANTI DENGAN KONFIGURASI FIREBASE ANDA!
+    const firebaseConfig = {
+      apiKey: "AIzaSyCs4A2ceW6rHh0e9zXAUKPcRvH7xGMIr3E",
+      authDomain: "monitoring-hidroponik-6dcbb.firebaseapp.com",
+      databaseURL: "https://monitoring-hidroponik-6dcbb-default-rtdb.asia-southeast1.firebasedatabase.app",
+      projectId: "monitoring-hidroponik-6dcbb"
+    };
+
+    let app, db, auth;
+    let isAdmin = false;
+
+    // ⚠️ GANTI DENGAN UID AKUN FIREBASE ANDA (didapat dari Firebase Console → Authentication → Users)
+    const ADMIN_UID = "Xd2Y7GZBvicueozl2cozaJHiAOD2";
+
+    try {
+      app = initializeApp(firebaseConfig);
+      db = getDatabase(app);
+      auth = getAuth(app);
+    } catch (err) {
+      console.error("Firebase initialization error:", err);
+    }
+
+    // ================= 2. AUTH: LOGIN / LOGOUT / AKSES KONTROL =================
+    const btnAuth = document.getElementById('btn-auth');
+    const modalLogin = document.getElementById('modal-login');
+    const btnLoginCancel = document.getElementById('btn-login-cancel');
+    const btnLoginSubmit = document.getElementById('btn-login-submit');
+    const loginError = document.getElementById('login-error');
+
+    // Elemen yang hanya bisa diakses admin
+    const adminElements = document.querySelectorAll('.admin-only');
+
+    function setAdminMode(admin) {
+      isAdmin = admin;
+      adminElements.forEach(el => {
+        if (admin) {
+          el.classList.remove('locked');
+        } else {
+          el.classList.add('locked');
+        }
+      });
+      // Enable/disable mode toggle based on admin
+      document.getElementById('toggle-mode').disabled = !admin;
+    }
+
+    btnAuth.addEventListener('click', () => {
+      if (isAdmin) {
+        // Logout
+        if (auth) {
+          signOut(auth).then(() => {
+            setAdminMode(false);
+            btnAuth.innerHTML = '🔑 Login Admin';
+            btnAuth.classList.remove('logged-in');
+          });
+        }
+      } else {
+        // Show login modal
+        modalLogin.classList.add('show');
+        loginError.style.display = 'none';
+        document.getElementById('login-email').value = '';
+        document.getElementById('login-pass').value = '';
+        document.getElementById('login-email').focus();
+      }
+    });
+
+    btnLoginCancel.addEventListener('click', () => {
+      modalLogin.classList.remove('show');
+    });
+
+    modalLogin.addEventListener('click', (e) => {
+      if (e.target === modalLogin) modalLogin.classList.remove('show');
+    });
+
+    btnLoginSubmit.addEventListener('click', () => {
+      const email = document.getElementById('login-email').value.trim();
+      const pass = document.getElementById('login-pass').value;
+      if (!email || !pass) {
+        loginError.innerText = 'Isi email dan password!';
+        loginError.style.display = 'block';
+        return;
+      }
+      if (!auth) {
+        loginError.innerText = 'Firebase belum dikonfigurasi!';
+        loginError.style.display = 'block';
+        return;
+      }
+      btnLoginSubmit.disabled = true;
+      btnLoginSubmit.innerText = '⏳ Memverifikasi...';
+
+      signInWithEmailAndPassword(auth, email, pass)
+        .then((cred) => {
+          if (cred.user.uid === ADMIN_UID) {
+            setAdminMode(true);
+            modalLogin.classList.remove('show');
+            btnAuth.innerHTML = '✅ Logout Admin';
+            btnAuth.classList.add('logged-in');
+          } else {
+            loginError.innerText = 'Akun ini bukan Admin!';
+            loginError.style.display = 'block';
+            signOut(auth);
+          }
+        })
+        .catch((err) => {
+          console.error(err);
+          if (err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password' || err.code === 'auth/invalid-credential') {
+            loginError.innerText = 'Email atau password salah!';
+          } else if (err.code === 'auth/invalid-email') {
+            loginError.innerText = 'Format email tidak valid!';
+          } else if (err.code === 'auth/too-many-requests') {
+            loginError.innerText = 'Terlalu banyak percobaan. Coba lagi nanti.';
+          } else {
+            loginError.innerText = 'Gagal login: ' + err.message;
+          }
+          loginError.style.display = 'block';
+        })
+        .finally(() => {
+          btnLoginSubmit.disabled = false;
+          btnLoginSubmit.innerText = '🔓 Masuk';
+        });
+    });
+
+    // Enter key to submit login
+    document.getElementById('login-pass').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') btnLoginSubmit.click();
+    });
+
+    // Cek status auth saat halaman dimuat
+    if (auth) {
+      onAuthStateChanged(auth, (user) => {
+        if (user && user.uid === ADMIN_UID) {
+          setAdminMode(true);
+          btnAuth.innerHTML = '✅ Logout Admin';
+          btnAuth.classList.add('logged-in');
+        } else {
+          setAdminMode(false);
+          btnAuth.innerHTML = '🔑 Login Admin';
+          btnAuth.classList.remove('logged-in');
+        }
+      });
+    }
+
+    // ================= 3. GRAFIK CHART.JS (DUAL Y-AXIS) =================
     let historyData = [];
     const ctx = document.getElementById('sensorChart').getContext('2d');
     const sensorChart = new Chart(ctx, {
@@ -476,49 +772,51 @@
       }
     });
 
-    // ================= 5. SINKRONISASI SENSOR & EVALUASI RENTANG PAKCOY =================
+    // ================= 4. SINKRONISASI SENSOR & EVALUASI RENTANG PAKCOY =================
     let minEc = 1000, maxEc = 1200, minPh = 5.8, maxPh = 6.2;
 
-    onValue(ref(db, 'monitoring'), (snapshot) => {
-      const d = snapshot.val();
-      if (!d) return;
+    if (db) {
+      onValue(ref(db, 'monitoring'), (snapshot) => {
+        const d = snapshot.val();
+        if (!d) return;
 
-      const ph = d.ph !== undefined ? Number(d.ph).toFixed(2) : 0;
-      const ec = d.ec !== undefined ? Math.round(Number(d.ec)) : 0;
-      const suhu = d.suhu !== undefined ? Number(d.suhu).toFixed(1) : 0;
+        const ph = d.ph !== undefined ? Number(d.ph).toFixed(2) : 0;
+        const ec = d.ec !== undefined ? Math.round(Number(d.ec)) : 0;
+        const suhu = d.suhu !== undefined ? Number(d.suhu).toFixed(1) : 0;
 
-      const now = new Date();
-      const tanggalWaktu = `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID', { hour12: false })}`;
-      const jamSaja = now.toLocaleTimeString('id-ID', { hour12: false });
+        const now = new Date();
+        const tanggalWaktu = `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
+        const jamSaja = now.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' });
 
-      document.getElementById('val-ph').innerText = ph;
-      document.getElementById('val-ec').innerText = ec;
-      document.getElementById('val-suhu').innerText = suhu;
+        document.getElementById('val-ph').innerText = ph;
+        document.getElementById('val-ec').innerText = ec;
+        document.getElementById('val-suhu').innerText = suhu;
 
-      const badge = document.getElementById('overall-badge');
-      if (ec < minEc || ph < minPh) {
-        badge.innerText = "● KURANG (DOSING AKTIF)";
-        badge.className = "badge-pill warn";
-      } else if (ec > maxEc || ph > maxPh) {
-        badge.innerText = "● MELEBIHI BATAS MAKSIMAL";
-        badge.className = "badge-pill danger";
-      } else {
-        badge.innerText = "● RENTANG IDEAL PAKCOY";
-        badge.className = "badge-pill";
-      }
+        const badge = document.getElementById('overall-badge');
+        if (ec < minEc || ph < minPh) {
+          badge.innerText = "● KURANG (DOSING AKTIF)";
+          badge.className = "badge-pill warn";
+        } else if (ec > maxEc || ph > maxPh) {
+          badge.innerText = "● MELEBIHI BATAS MAKSIMAL";
+          badge.className = "badge-pill danger";
+        } else {
+          badge.innerText = "● RENTANG IDEAL PAKCOY";
+          badge.className = "badge-pill";
+        }
 
-      historyData.push({ fullTime: tanggalWaktu, time: jamSaja, ph, ec, suhu });
-      document.getElementById('log-counter').innerText = `Data Terekam: ${historyData.length} sampel`;
+        historyData.push({ fullTime: tanggalWaktu, time: jamSaja, ph, ec, suhu });
+        document.getElementById('log-counter').innerText = `Data Terekam: ${historyData.length} sampel`;
 
-      const recent = historyData.slice(-15);
-      sensorChart.data.labels = recent.map(i => i.time);
-      sensorChart.data.datasets[0].data = recent.map(i => i.ph);
-      sensorChart.data.datasets[1].data = recent.map(i => i.ec);
-      sensorChart.data.datasets[2].data = recent.map(i => i.suhu);
-      sensorChart.update();
-    });
+        const recent = historyData.slice(-15);
+        sensorChart.data.labels = recent.map(i => i.time);
+        sensorChart.data.datasets[0].data = recent.map(i => i.ph);
+        sensorChart.data.datasets[1].data = recent.map(i => i.ec);
+        sensorChart.data.datasets[2].data = recent.map(i => i.suhu);
+        sensorChart.update();
+      });
+    }
 
-    // ================= 6. KONTROL MODE & 3 POMPA (A, B, PH) =================
+    // ================= 5. KONTROL MODE & 3 POMPA (A, B, PH) =================
     const toggleMode = document.getElementById('toggle-mode');
     const toggleA  = document.getElementById('toggle-a');
     const toggleB  = document.getElementById('toggle-b');
@@ -533,60 +831,193 @@
       document.getElementById(`card-${prefix}`).className = isOn ? "bubble-card relay-card active-glow" : "bubble-card relay-card";
     }
 
-    onValue(ref(db, 'kontrol'), (snap) => {
-      const k = snap.val() || {};
-      const isAuto = k.otomatis !== undefined ? Boolean(k.otomatis) : true;
-      toggleMode.checked = isAuto;
-      document.getElementById('txt-mode').innerText = isAuto ? "Otomasi Dosing" : "Mode Manual";
-      
-      toggleA.disabled = isAuto;
-      toggleB.disabled = isAuto;
-      togglePh.disabled = isAuto;
+    if (db) {
+      onValue(ref(db, 'kontrol'), (snap) => {
+        const k = snap.val() || {};
+        const isAuto = k.otomatis !== undefined ? Boolean(k.otomatis) : true;
+        toggleMode.checked = isAuto;
+        document.getElementById('txt-mode').innerText = isAuto ? "Otomasi Dosing" : "Mode Manual";
+        
+        // Pompa manual hanya bisa diubah jika admin DAN mode manual
+        toggleA.disabled = !isAdmin || isAuto;
+        toggleB.disabled = !isAdmin || isAuto;
+        togglePh.disabled = !isAdmin || isAuto;
 
-      updatePumpUI('a', Boolean(k.pompa_a));
-      updatePumpUI('b', Boolean(k.pompa_b));
-      updatePumpUI('ph', Boolean(k.pompa_ph));
+        updatePumpUI('a', Boolean(k.pompa_a));
+        updatePumpUI('b', Boolean(k.pompa_b));
+        updatePumpUI('ph', Boolean(k.pompa_ph));
+      });
+    }
+
+    toggleMode.addEventListener('change', (e) => {
+      if (isAdmin && db) set(ref(db, 'kontrol/otomatis'), e.target.checked);
+    });
+    toggleA.addEventListener('change', (e) => {
+      if (isAdmin && !toggleMode.checked && db) set(ref(db, 'kontrol/pompa_a'), e.target.checked);
+    });
+    toggleB.addEventListener('change', (e) => {
+      if (isAdmin && !toggleMode.checked && db) set(ref(db, 'kontrol/pompa_b'), e.target.checked);
+    });
+    togglePh.addEventListener('change', (e) => {
+      if (isAdmin && !toggleMode.checked && db) set(ref(db, 'kontrol/pompa_ph'), e.target.checked);
     });
 
-    toggleMode.addEventListener('change', (e) => set(ref(db, 'kontrol/otomatis'), e.target.checked));
-    toggleA.addEventListener('change', (e) => { if (!toggleMode.checked) set(ref(db, 'kontrol/pompa_a'), e.target.checked); });
-    toggleB.addEventListener('change', (e) => { if (!toggleMode.checked) set(ref(db, 'kontrol/pompa_b'), e.target.checked); });
-    togglePh.addEventListener('change', (e) => { if (!toggleMode.checked) set(ref(db, 'kontrol/pompa_ph'), e.target.checked); });
+    // ================= 6. PENGATURAN RENTANG MIN & MAX =================
+    if (db) {
+      onValue(ref(db, 'setting'), (snap) => {
+        const s = snap.val();
+        if (!s) return;
+        if (s.min_ec !== undefined) { minEc = Number(s.min_ec); document.getElementById('in-min-ec').value = minEc; }
+        if (s.max_ec !== undefined) { maxEc = Number(s.max_ec); document.getElementById('in-max-ec').value = maxEc; }
+        if (s.min_ph !== undefined) { minPh = Number(s.min_ph); document.getElementById('in-min-ph').value = minPh; }
+        if (s.max_ph !== undefined) { maxPh = Number(s.max_ph); document.getElementById('in-max-ph').value = maxPh; }
 
-    // ================= 7. PENGATURAN RENTANG MIN & MAX =================
-    onValue(ref(db, 'setting'), (snap) => {
-      const s = snap.val();
-      if (!s) return;
-      if (s.min_ec !== undefined) { minEc = Number(s.min_ec); document.getElementById('in-min-ec').value = minEc; }
-      if (s.max_ec !== undefined) { maxEc = Number(s.max_ec); document.getElementById('in-max-ec').value = maxEc; }
-      if (s.min_ph !== undefined) { minPh = Number(s.min_ph); document.getElementById('in-min-ph').value = minPh; }
-      if (s.max_ph !== undefined) { maxPh = Number(s.max_ph); document.getElementById('in-max-ph').value = maxPh; }
-
-      document.getElementById('lbl-range-ec').innerText = `${minEc} - ${maxEc}`;
-      document.getElementById('lbl-range-ph').innerText = `${minPh.toFixed(1)} - ${maxPh.toFixed(1)}`;
-    });
+        document.getElementById('lbl-range-ec').innerText = `${minEc} - ${maxEc}`;
+        document.getElementById('lbl-range-ph').innerText = `${minPh.toFixed(1)} - ${maxPh.toFixed(1)}`;
+      });
+    }
 
     document.getElementById('btn-save-ec').addEventListener('click', () => {
+      if (!isAdmin) { alert("Akses Ditolak: Anda bukan Admin!"); return; }
       const minV = parseFloat(document.getElementById('in-min-ec').value);
       const maxV = parseFloat(document.getElementById('in-max-ec').value);
       if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
-        update(ref(db, 'setting'), { min_ec: minV, max_ec: maxV });
+        update(ref(db, 'setting'), { min_ec: minV, max_ec: maxV })
+          .then(() => alert("✅ Rentang PPM berhasil disimpan!"))
+          .catch(() => alert("❌ Gagal menyimpan! Periksa koneksi."));
       } else {
-        alert("Pastikan nilai Minimal PPM lebih kecil dari Maksimal PPM!");
+        alert("⚠️ Pastikan nilai Min PPM lebih kecil dari Max PPM!");
       }
     });
 
     document.getElementById('btn-save-ph').addEventListener('click', () => {
+      if (!isAdmin) { alert("Akses Ditolak: Anda bukan Admin!"); return; }
       const minV = parseFloat(document.getElementById('in-min-ph').value);
       const maxV = parseFloat(document.getElementById('in-max-ph').value);
       if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
-        update(ref(db, 'setting'), { min_ph: minV, max_ph: maxV });
+        update(ref(db, 'setting'), { min_ph: minV, max_ph: maxV })
+          .then(() => alert("✅ Rentang pH berhasil disimpan!"))
+          .catch(() => alert("❌ Gagal menyimpan! Periksa koneksi."));
       } else {
-        alert("Pastikan nilai Minimal pH lebih kecil dari Maksimal pH!");
+        alert("⚠️ Pastikan nilai Min pH lebih kecil dari Max pH!");
       }
     });
 
-    // ================= 8. UNDUH CSV =================
+    // ================= 7. JADWAL POMPA OTOMATIS =================
+    let scheduleData = []; // Untuk CSV export
+
+    function renderScheduleList(schedules) {
+      const listEl = document.getElementById('schedule-list');
+      scheduleData = []; // Reset for CSV
+
+      if (!schedules || Object.keys(schedules).length === 0) {
+        listEl.innerHTML = '<div class="schedule-empty">Belum ada jadwal pompa.</div>';
+        return;
+      }
+
+      let html = '';
+      const entries = Object.entries(schedules).sort((a, b) => {
+        const timeA = a[1].waktu || '00:00:00';
+        const timeB = b[1].waktu || '00:00:00';
+        return timeA.localeCompare(timeB);
+      });
+
+      entries.forEach(([key, val]) => {
+        const waktu = val.waktu || '00:00:00';
+        const durasi = val.durasi || 30;
+        const pompaList = [];
+        if (val.pompa_a) pompaList.push('Nutrisi A');
+        if (val.pompa_b) pompaList.push('Nutrisi B');
+        if (val.pompa_ph) pompaList.push('pH');
+        const pompaText = pompaList.length > 0 ? pompaList.join(', ') : 'Tidak ada pompa';
+        const aktif = val.aktif !== false;
+
+        // Simpan untuk CSV
+        scheduleData.push({ waktu, durasi, pompa_a: !!val.pompa_a, pompa_b: !!val.pompa_b, pompa_ph: !!val.pompa_ph, aktif });
+
+        html += `
+          <div class="schedule-entry" style="${!aktif ? 'opacity: 0.5;' : ''}">
+            <div style="display: flex; align-items: center; gap: 14px; flex-wrap: wrap;">
+              <span class="time-label">⏰ ${waktu}</span>
+              <span class="pumps-label">🔧 ${pompaText}</span>
+              <span class="duration-label">⏱ ${durasi} detik</span>
+              <span class="badge-pill" style="font-size: 0.62rem; padding: 2px 7px;">${aktif ? '● AKTIF' : '● NONAKTIF'}</span>
+            </div>
+            <div style="display: flex; gap: 6px; align-items: center;">
+              ${isAdmin ? `
+                <label class="switch" style="transform: scale(0.85);">
+                  <input type="checkbox" ${aktif ? 'checked' : ''} data-sched-key="${key}" data-action="toggle-active">
+                  <span class="slider"></span>
+                </label>
+                <button class="btn-del-schedule" data-sched-key="${key}" data-action="delete">✕</button>
+              ` : ''}
+            </div>
+          </div>
+        `;
+      });
+
+      listEl.innerHTML = html;
+
+      // Bind events for admin actions
+      listEl.querySelectorAll('[data-action="delete"]').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const key = btn.getAttribute('data-sched-key');
+          if (confirm('Hapus jadwal ini?')) {
+            remove(ref(db, `jadwal/${key}`));
+          }
+        });
+      });
+
+      listEl.querySelectorAll('[data-action="toggle-active"]').forEach(inp => {
+        inp.addEventListener('change', (e) => {
+          const key = e.target.getAttribute('data-sched-key');
+          update(ref(db, `jadwal/${key}`), { aktif: e.target.checked });
+        });
+      });
+    }
+
+    if (db) {
+      onValue(ref(db, 'jadwal'), (snap) => {
+        renderScheduleList(snap.val());
+      });
+    }
+
+    // Tambah jadwal baru
+    document.getElementById('btn-add-schedule').addEventListener('click', () => {
+      if (!isAdmin) { alert("Akses Ditolak: Anda bukan Admin!"); return; }
+      if (!db) { alert("Firebase belum terhubung!"); return; }
+
+      const waktu = document.getElementById('sched-time').value;
+      const durasi = parseInt(document.getElementById('sched-duration').value) || 30;
+      const pompaA = document.getElementById('sched-pa').checked;
+      const pompaB = document.getElementById('sched-pb').checked;
+      const pompaPh = document.getElementById('sched-pc').checked;
+
+      if (!waktu) { alert("⚠️ Pilih waktu terlebih dahulu!"); return; }
+      if (!pompaA && !pompaB && !pompaPh) { alert("⚠️ Pilih minimal satu pompa!"); return; }
+      if (durasi < 1 || durasi > 600) { alert("⚠️ Durasi harus antara 1-600 detik!"); return; }
+
+      // Konversi ke format HH:MM:SS
+      const waktuParts = waktu.split(':');
+      const waktuFormatted = waktuParts.length === 3 ? waktu : `${waktu}:00`;
+
+      push(ref(db, 'jadwal'), {
+        waktu: waktuFormatted,
+        durasi: durasi,
+        pompa_a: pompaA,
+        pompa_b: pompaB,
+        pompa_ph: pompaPh,
+        aktif: true
+      })
+      .then(() => {
+        // Reset form
+        document.getElementById('sched-time').value = '08:00:00';
+        document.getElementById('sched-duration').value = '30';
+      })
+      .catch(() => alert("❌ Gagal menambahkan jadwal!"));
+    });
+
+    // ================= 8. UNDUH CSV SENSOR =================
     document.getElementById('btn-download').addEventListener('click', () => {
       if (historyData.length === 0) {
         alert("Belum ada data sensor yang masuk untuk diunduh.");
@@ -598,7 +1029,25 @@
       });
       const link = document.createElement("a");
       link.setAttribute("href", encodeURI(csv));
-      link.setAttribute("download", `Log_Pakcoy_${new Date().toISOString().slice(0,10)}.csv`);
+      link.setAttribute("download", `Log_Sensor_Pakcoy_${new Date().toISOString().slice(0,10)}.csv`);
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    });
+
+    // ================= 9. UNDUH CSV JADWAL POMPA =================
+    document.getElementById('btn-download-schedule').addEventListener('click', () => {
+      if (scheduleData.length === 0) {
+        alert("Belum ada data jadwal pompa untuk diunduh.");
+        return;
+      }
+      let csv = "data:text/csv;charset=utf-8,Waktu (HH:MM:SS),Durasi (detik),Pompa A,Pompa B,Pompa pH,Status\n";
+      scheduleData.forEach(r => {
+        csv += `"${r.waktu}",${r.durasi},${r.pompa_a ? 'YA' : 'TIDAK'},${r.pompa_b ? 'YA' : 'TIDAK'},${r.pompa_ph ? 'YA' : 'TIDAK'},${r.aktif ? 'AKTIF' : 'NONAKTIF'}\n`;
+      });
+      const link = document.createElement("a");
+      link.setAttribute("href", encodeURI(csv));
+      link.setAttribute("download", `Jadwal_Pompa_Pakcoy_${new Date().toISOString().slice(0,10)}.csv`);
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
