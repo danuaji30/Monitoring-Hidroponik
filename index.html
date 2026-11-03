@@ -617,7 +617,7 @@
     let isAdmin = false;
 
     // ⚠️ GANTI DENGAN UID AKUN FIREBASE ANDA (didapat dari Firebase Console → Authentication → Users)
-    const ADMIN_UID = "Xd2Y7GZBvicueozl2cozaJHiAOD2";
+    const ADMIN_UIDS = ["Xd2Y7GZBvicueozl2cozaJHiAOD2", "tqttDSVojGgyrIx7qmF4P2xJNoB2"];
 
     try {
       app = initializeApp(firebaseConfig);
@@ -696,7 +696,7 @@
 
       signInWithEmailAndPassword(auth, email, pass)
         .then((cred) => {
-          if (cred.user.uid === ADMIN_UID) {
+          if (ADMIN_UIDS.includes(cred.user.uid)) {
             setAdminMode(true);
             modalLogin.classList.remove('show');
             btnAuth.innerHTML = '✅ Logout Admin';
@@ -734,7 +734,7 @@
     // Cek status auth saat halaman dimuat
     if (auth) {
       onAuthStateChanged(auth, (user) => {
-        if (user && user.uid === ADMIN_UID) {
+        if (user && ADMIN_UIDS.includes(user.uid)) {
           setAdminMode(true);
           btnAuth.innerHTML = '✅ Logout Admin';
           btnAuth.classList.add('logged-in');
