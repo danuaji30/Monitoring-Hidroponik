@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="id" data-theme="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>HydroSmart • Pakcoy Master Dashboard</title>
+  
+  <!-- CDN External Library -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  
+  <!-- Pemanggilan Berkas CSS Terpisah -->
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <div class="wrapper">
+    <!-- HEADER -->
+    <header class="bubble-card top-bar">
+      <div class="brand">
+        <div class="brand-icon">🥬</div>
+        <div class="brand-text">
+          <h1>HydroSmart • Pakcoy Master Controller</h1>
+          <p>Sistem Kontrol Dosing Nutrisi A, B, pH & Sirkulasi Pipa Hidroponik</p>
+        </div>
+      </div>
+
+      <div class="header-actions">
+        <div class="clock-box">
+          <div class="clock-date" id="rt-date">Day, Date MONTH Year</div>
+          <div class="clock-time"><span id="rt-time">00:00:00</span> WIB</div>
+        </div>
+        <button class="auth-btn" id="btn-auth" title="Login Hak Akses Admin">🔑 Login Admin</button>
+        <button class="theme-btn" id="btn-theme" title="Ubah Tema Terang / Gelap">☀️</button>
+      </div>
+    </header>
+
+    <!-- CONTENT 2 KOLOM -->
+    <div class="main-grid">
+      
+      <!-- PANEL KIRI: TELEMETRI & GRAFIK -->
+      <section class="bubble-card panel">
+        <div class="panel-header">
+          <h2 class="panel-title">📈 Parameter Air Pakcoy</h2>
+          <span class="badge-pill" id="overall-badge">● RENTANG IDEAL</span>
+        </div>
+
+        <div class="sensor-row">
+          <div class="bubble-card sensor-item" id="box-ph">
+            <div class="sensor-label">Kadar pH Air</div>
+            <div class="sensor-val" id="val-ph" style="color: var(--accent-blue);">--</div>
+            <div class="sensor-sub">Target: <strong id="lbl-range-ph">5.8 - 6.2</strong></div>
+          </div>
+
+          <div class="bubble-card sensor-item" id="box-ec">
+            <div class="sensor-label">Nutrisi PPM (TDS)</div>
+            <div class="sensor-val"><span id="val-ec" style="color: var(--accent-green);">--</span> <span style="font-size: 0.82rem;">ppm</span></div>
+            <div class="sensor-sub">Target: <strong id="lbl-range-ec">1000 - 1200</strong></div>
+          </div>
+
+          <div class="bubble-card sensor-item" id="box-suhu">
+            <div class="sensor-label">Suhu Air DS18B20</div>
+            <div class="sensor-val"><span id="val-suhu" style="color: var(--accent-amber);">--</span> <span style="font-size: 0.85rem;">°C</span></div>
+            <div class="sensor-sub">Target: <strong id="lbl-range-suhu">22.0 - 28.0</strong></div>
+          </div>
+        </div>
+
+        <div class="chart-box">
+          <div class="chart-head">
+            <span>Tren Real-Time Sensor</span>
+            <span id="log-counter">Data Terekam: 0 sampel</span>
+          </div>
+          <div class="chart-wrap">
+            <canvas id="sensorChart"></canvas>
+          </div>
+        </div>
+      </section>
+
+      <!-- PANEL KANAN: KONTROL POMPA & KALIBRASI TARGET -->
+      <section class="bubble-card panel">
+        
+        <!-- POMPA SIRKULASI UTAMA -->
+        <div class="circulation-card bubble-card" id="card-circ">
+          <div class="circ-left">
+            <div class="circ-icon">🔄</div>
+            <div>
+              <h3 class="circ-title">Pompa Sirkulasi Hidroponik</h3>
+              <p class="circ-desc">Aliran Nutrisi Kontinu ke Talang / Pipa Atas</p>
+            </div>
+          </div>
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <div class="status-dot-wrap">
+              <span class="dot" id="dot-circ"></span>
+              <span id="status-txt-circ" style="font-size: 0.76rem; font-weight: 700; color: var(--text-muted);">Mati</span>
+            </div>
+            <label class="switch admin-only locked" id="wrap-circ">
+              <input type="checkbox" id="toggle-circ" disabled>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <div class="panel-header">
+          <h2 class="panel-title">🎛️ Kontrol Pompa Dosing 3 Kanal</h2>
+          <div class="admin-only locked" id="mode-toggle-wrap" style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;" id="txt-mode">Otomasi Dosing</span>
+            <label class="switch" title="Sakelar Otomatis / Manual">
+              <input type="checkbox" id="toggle-mode" checked disabled>
+              <span class="slider"></span>
+            </label>
+          </div>
+        </div>
+
+        <!-- 3 KARTU POMPA DOSING -->
+        <div class="relay-grid">
+          <!-- POMPA A -->
+          <div class="bubble-card relay-card" id="card-a">
+            <div>
+              <div class="relay-top">
+                <div class="relay-icon">🅰️</div>
+                <span class="kanal-tag">POMPA A</span>
+              </div>
+              <div class="relay-name">Nutrisi Pekatan A</div>
+              <span class="priority-tag">🧪 KALSIUM & N</span>
+            </div>
+            <div class="relay-footer">
+              <div class="status-dot-wrap">
+                <span class="dot" id="dot-a"></span>
+                <span id="status-txt-a">Mati</span>
+              </div>
+              <label class="switch admin-only locked" id="wrap-a">
+                <input type="checkbox" id="toggle-a" disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- POMPA B -->
+          <div class="bubble-card relay-card" id="card-b">
+            <div>
+              <div class="relay-top">
+                <div class="relay-icon">🅱️</div>
+                <span class="kanal-tag">POMPA B</span>
+              </div>
+              <div class="relay-name">Nutrisi Pekatan B</div>
+              <span class="priority-tag">🌿 FOSFAT & MIKRO</span>
+            </div>
+            <div class="relay-footer">
+              <div class="status-dot-wrap">
+                <span class="dot" id="dot-b"></span>
+                <span id="status-txt-b">Mati</span>
+              </div>
+              <label class="switch admin-only locked" id="wrap-b">
+                <input type="checkbox" id="toggle-b" disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+
+          <!-- POMPA C (PH) -->
+          <div class="bubble-card relay-card" id="card-ph">
+            <div>
+              <div class="relay-top">
+                <div class="relay-icon">💧</div>
+                <span class="kanal-tag">POMPA C</span>
+              </div>
+              <div class="relay-name">Penstabil pH</div>
+              <span class="priority-tag" style="color: var(--accent-amber); background: rgba(245,158,11,0.15);">⚖️ BUFFER PH</span>
+            </div>
+            <div class="relay-footer">
+              <div class="status-dot-wrap">
+                <span class="dot" id="dot-ph"></span>
+                <span id="status-txt-ph">Mati</span>
+              </div>
+              <label class="switch admin-only locked" id="wrap-ph">
+                <input type="checkbox" id="toggle-ph" disabled>
+                <span class="slider"></span>
+              </label>
+            </div>
+          </div>
+        </div>
+
+        <!-- KALIBRASI BATAS TARGET MIN-MAX (PPM, pH, SUHU) -->
+        <div class="bubble-card target-card admin-only locked" id="target-settings">
+          <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 4px;">
+            <span style="font-size: 0.82rem; font-weight: 700;">⚙️ Batas Target Nutrisi, pH & Suhu Pakcoy</span>
+            <span style="font-size: 0.68rem; color: var(--text-muted);">Nilai acuan fail-safe & otomasi dosing</span>
+          </div>
+
+          <div class="target-grid-3">
+            <!-- 1. Rentang PPM -->
+            <div class="range-box">
+              <div class="range-box-title"><span>Target PPM (TDS)</span></div>
+              <div class="dual-inputs">
+                <div class="mini-field">
+                  <label>Min (Dosing ON)</label>
+                  <input type="number" id="in-min-ec" step="25" value="1000">
+                </div>
+                <div class="mini-field">
+                  <label>Max (Batas Atas)</label>
+                  <input type="number" id="in-max-ec" step="25" value="1200">
+                </div>
+              </div>
+              <button class="btn-save-range" id="btn-save-ec">Simpan PPM</button>
+            </div>
+
+            <!-- 2. Rentang pH -->
+            <div class="range-box">
+              <div class="range-box-title"><span>Target pH Air</span></div>
+              <div class="dual-inputs">
+                <div class="mini-field">
+                  <label>Min pH</label>
+                  <input type="number" id="in-min-ph" step="0.1" value="5.8">
+                </div>
+                <div class="mini-field">
+                  <label>Max pH</label>
+                  <input type="number" id="in-max-ph" step="0.1" value="6.2">
+                </div>
+              </div>
+              <button class="btn-save-range" id="btn-save-ph">Simpan pH</button>
+            </div>
+
+            <!-- 3. Rentang Suhu -->
+            <div class="range-box">
+              <div class="range-box-title"><span>Target Suhu (°C)</span></div>
+              <div class="dual-inputs">
+                <div class="mini-field">
+                  <label>Min Suhu</label>
+                  <input type="number" id="in-min-suhu" step="0.5" value="22.0">
+                </div>
+                <div class="mini-field">
+                  <label>Max Suhu</label>
+                  <input type="number" id="in-max-suhu" step="0.5" value="28.0">
+                </div>
+              </div>
+              <button class="btn-save-range" id="btn-save-suhu">Simpan Suhu</button>
+            </div>
+          </div>
+        </div>
+
+      </section>
+    </div>
+
+    <!-- BANNER EKSPOR CSV -->
+    <footer class="bubble-card bottom-banner">
+      <div class="banner-info">
+        <div class="banner-icon">📊</div>
+        <div class="banner-text">
+          <h4>Ekspor Riwayat Telemetri (CSV)</h4>
+          <p>Unduh data riwayat pH, nutrisi (ppm), suhu air, dan diagnosa sensor dalam format CSV.</p>
+        </div>
+      </div>
+      <button class="btn-action" id="btn-download">📥 Unduh CSV Sensor</button>
+    </footer>
+  </div>
+
+  <!-- MODAL LOGIN ADMIN -->
+  <div class="modal-overlay" id="modal-login">
+    <div class="modal-box">
+      <h3>🔐 Login Admin HydroSmart</h3>
+      <p>Masukkan password admin untuk membuka hak kalibrasi target dan kendali manual pompa.</p>
+      <div class="modal-field">
+        <label>Password Admin</label>
+        <input type="password" id="login-pass" placeholder="Ketik password admin...">
+      </div>
+      <div class="modal-error" id="login-error">Password salah! Silakan coba lagi.</div>
+      <div class="modal-actions">
+        <button class="btn-modal-secondary" id="btn-login-cancel">Batal</button>
+        <button class="btn-modal-primary" id="btn-login-submit">🔓 Masuk</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Pemanggilan Berkas JS Terpisah di Akhir Body -->
+  <script type="module" src="app.js"></script>
+</body>
+</html>
