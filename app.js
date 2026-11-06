@@ -1,15 +1,20 @@
 // ==============================================================
-// 1. KONFIGURASI WEB APP GOOGLE APPS SCRIPT
+// 1. KONFIGURASI WEB APP GOOGLE APPS SCRIPT & KREDENSIAL
 // ==============================================================
 const GAS_URL = "https://script.google.com/macros/s/AKfycbycOnRCQqVl65n79biPf16Q5UyLYrsL3NA8q0HJ1id08539OoLeZnmuwW8EGrXqgjQz/exec";
 const ADMIN_PASSWORD_BENAR = "sibibikinpusing";
 
-// Variabel data ekspor aktif & penanggalan
+// Penampung data ekspor CSV & penanggalan dinamis
 let activeExportData = [];
-let currentExportDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
+let currentExportDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // Format: YYYY-MM-DD
+
+// Helper validasi status aktif pompa (kebal tipe boolean true/false maupun string "ON"/"true")
+function isPumpActive(val) {
+  return val === true || val === "true" || val === "ON";
+}
 
 // ==============================================================
-// 2. JAM REAL-TIME & TEMA
+// 2. JAM REAL-TIME & PENGATUR TEMA (DARK / LIGHT)
 // ==============================================================
 const htmlEl = document.documentElement;
 const btnTheme = document.getElementById('btn-theme');
@@ -37,7 +42,7 @@ setInterval(updateClock, 1000);
 updateClock();
 
 // ==============================================================
-// 3. AUTH ADMIN & KONTROL MANUAL
+// 3. SISTEM AUTH ADMIN & KONTROL MANUAL
 // ==============================================================
 let isAdmin = false;
 const btnAuth = document.getElementById('btn-auth');
@@ -85,6 +90,7 @@ function setAdminMode(status) {
   }
 }
 
+// Cek sesi login saat halaman dimuat
 if (sessionStorage.getItem('hydroAdminLoggedIn') === 'true') {
   setAdminMode(true);
 }
@@ -105,8 +111,30 @@ if (btnAuth) {
   });
 }
 
-if (btnLoginCancel && modalLogin) btnLoginCancel.addEventListener('click', () => modalLogin.classList.remove('show'));
-if (modalLogin) modalLogin.addEventListener('click', (e) => { if (e.target === modalLogin) modalLogin.classList.remove('show'); });
+// Buka modal login otomatis jika elemen yang terkunci diklik
+document.querySelectorAll('.admin-only').forEach(card => {
+  card.addEventListener('click', () => {
+    if (!isAdmin && modalLogin) {
+      modalLogin.classList.add('show');
+      if (loginError) loginError.style.display = 'none';
+      const passIn = document.getElementById('login-pass');
+      if (passIn) {
+        passIn.value = '';
+        passIn.focus();
+      }
+    }
+  });
+});
+
+if (btnLoginCancel && modalLogin) {
+  btnLoginCancel.addEventListener('click', () => modalLogin.classList.remove('show'));
+}
+
+if (modalLogin) {
+  modalLogin.addEventListener('click', (e) => {
+    if (e.target === modalLogin) modalLogin.classList.remove('show');
+  });
+}
 
 if (btnLoginSubmit) {
   btnLoginSubmit.addEventListener('click', () => {
@@ -120,6 +148,13 @@ if (btnLoginSubmit) {
   });
 }
 
+const inputPass = document.getElementById('login-pass');
+if (inputPass && btnLoginSubmit) {
+  inputPass.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') btnLoginSubmit.click();
+  });
+}
+
 function kirimKontrolKeServer(payload) {
   if (!GAS_URL || !GAS_URL.startsWith("https://")) return;
   fetch(GAS_URL, {
@@ -127,9 +162,10 @@ function kirimKontrolKeServer(payload) {
     mode: "no-cors",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload)
-  }).catch(err => console.error("Gagal sinkron perintah pompa:", err));
+  }).catch(err => console.error("Gagal mengirim kontrol ke server:", err));
 }
 
+// Event listener switch kontrol manual
 if (toggleMode) {
   toggleMode.addEventListener('change', (e) => {
     if (!isAdmin) return;
@@ -174,7 +210,7 @@ if (toggleCirc) {
 }
 
 // ==============================================================
-// 4. BATAS TARGET MIN-MAX
+// 4. BATAS TARGET MIN-MAX NUTRISI
 // ==============================================================
 let minEc = parseFloat(localStorage.getItem('minEc')) || 1000;
 let maxEc = parseFloat(localStorage.getItem('maxEc')) || 1200;
@@ -272,7 +308,7 @@ if (btnResetZoom && sensorChart) {
 }
 
 // ==============================================================
-// 6. LOGIKA PEMUATAN DATA GRAFIK (HARI INI, RIWAYAT, DATE PICKER)
+// 6. PEMUATAN DATA GRAFIK (HARI INI, RIWAYAT, & DATE PICKER)
 // ==============================================================
 async function loadTodayData() {
   if (!GAS_URL) return;
@@ -309,13 +345,15 @@ function renderTodayChart() {
   sensorChart.data.datasets[2].data = todayDataSeries.map(i => i.suhu);
   sensorChart.update();
   sensorChart.resetZoom();
-  document.getElementById('log-counter').innerText = `Data Hari Ini: ${todayDataSeries.length} sampel`;
+  const counter = document.getElementById('log-counter');
+  if (counter) counter.innerText = `Data Hari Ini: ${todayDataSeries.length} sampel`;
 }
 
 async function loadHistoryData() {
   if (!GAS_URL) return;
   try {
-    document.getElementById('log-counter').innerText = "Memuat riwayat jam...";
+    const counter = document.getElementById('log-counter');
+    if (counter) counter.innerText = "Memuat riwayat jam...";
     const res = await fetch(`${GAS_URL}?action=read_hourly_history`, { method: "GET", redirect: "follow" });
     const json = await res.json();
     if (json.status === "success" && Array.isArray(json.data)) {
@@ -335,7 +373,8 @@ function renderHistoryChart() {
   sensorChart.data.datasets[2].data = historyHourlySeries.map(i => i.avg_suhu);
   sensorChart.update();
   sensorChart.resetZoom();
-  document.getElementById('log-counter').innerText = `Riwayat Agregasi: ${historyHourlySeries.length} jam (Geser untuk telusuri)`;
+  const counter = document.getElementById('log-counter');
+  if (counter) counter.innerText = `Riwayat Agregasi: ${historyHourlySeries.length} jam (Geser untuk telusuri)`;
 }
 
 const btnModeToday = document.getElementById('btn-mode-today');
@@ -469,7 +508,14 @@ async function fetchLatestFromSheets() {
         const tglWaktu = `${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
         const jam = d.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
 
-        const rowObj = { fullTime: tglWaktu, time: jam, ph: Number(json.data.ph), ec: Math.round(Number(json.data.ppm)), suhu: Number(json.data.suhu), status: json.data.err_sensor };
+        const rowObj = {
+          fullTime: tglWaktu,
+          time: jam,
+          ph: Number(json.data.ph),
+          ec: Math.round(Number(json.data.ppm)),
+          suhu: Number(json.data.suhu),
+          status: json.data.err_sensor
+        };
 
         todayDataSeries.push(rowObj);
 
@@ -481,18 +527,22 @@ async function fetchLatestFromSheets() {
         updateSensorCards(json.data.suhu, json.data.ph, json.data.ppm, json.data.err_sensor);
       }
 
+      // Sinkronkan mode otomasi/manual
       if (json.data.otomatis !== undefined && toggleMode) {
-        toggleMode.checked = json.data.otomatis;
+        const isAuto = Boolean(json.data.otomatis);
+        toggleMode.checked = isAuto;
         const txtMode = document.getElementById('txt-mode');
-        if (txtMode) txtMode.innerText = json.data.otomatis ? "Otomasi Dosing" : "Mode Manual";
+        if (txtMode) txtMode.innerText = isAuto ? "Otomasi Dosing" : "Mode Manual";
         updateDosingInputsState();
       }
 
-      updatePumpUI('a', json.data.pompa_a === "ON");
-      updatePumpUI('b', json.data.pompa_b === "ON");
-      updatePumpUI('ph', json.data.pompa_ph === "ON");
-      updateCirculationUI(json.data.pompa_sirkulasi === "ON");
+      // Sinkronkan status sakelar pompa dengan helper isPumpActive
+      updatePumpUI('a', isPumpActive(json.data.pompa_a));
+      updatePumpUI('b', isPumpActive(json.data.pompa_b));
+      updatePumpUI('ph', isPumpActive(json.data.pompa_ph));
+      updateCirculationUI(isPumpActive(json.data.pompa_sirkulasi));
 
+      // Indikator status online/offline ESP32
       const waktuServer = new Date(json.data.waktu).getTime();
       const selisihDetik = Math.abs(Math.floor((Date.now() - waktuServer) / 1000));
       if (!isNaN(waktuServer) && selisihDetik > 120) {
@@ -510,7 +560,7 @@ fetchLatestFromSheets();
 setInterval(fetchLatestFromSheets, 6000);
 
 // ==============================================================
-// 8. UPDATE KARTU & STATUS SAKELAR
+// 8. PEMBARUAN TAMPILAN KARTU & STATUS SAKELAR
 // ==============================================================
 function updateSensorCards(suhu, ph, ec, statusDiag = "NORMAL") {
   const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
@@ -549,6 +599,7 @@ function updateSensorCards(suhu, ph, ec, statusDiag = "NORMAL") {
   }
 }
 
+// Gunakan classList.toggle agar tidak menghapus class bawaan relay-card, admin-only, atau locked
 function updatePumpUI(prefix, isOn) {
   const toggleEl = document.getElementById(`toggle-${prefix}`);
   const dotEl    = document.getElementById(`dot-${prefix}`);
@@ -561,7 +612,9 @@ function updatePumpUI(prefix, isOn) {
     txtEl.innerText = isOn ? "Menyala" : "Mati";
     txtEl.style.color = isOn ? "var(--accent-green)" : "var(--text-muted)";
   }
-  if (cardEl) cardEl.className = isOn ? "bubble-card relay-card active-glow" : "bubble-card relay-card";
+  if (cardEl) {
+    cardEl.classList.toggle('active-glow', isOn);
+  }
 }
 
 function updateCirculationUI(isOn) {
@@ -576,7 +629,9 @@ function updateCirculationUI(isOn) {
     txtEl.innerText = isOn ? "Mengalir (Aktif)" : "Mati";
     txtEl.style.color = isOn ? "var(--accent-cyan)" : "var(--text-muted)";
   }
-  if (cardEl) cardEl.className = isOn ? "circulation-card bubble-card active-flow" : "circulation-card bubble-card";
+  if (cardEl) {
+    cardEl.classList.toggle('active-flow', isOn);
+  }
 }
 
 function tandaiEspOffline(selisihDetik) {
