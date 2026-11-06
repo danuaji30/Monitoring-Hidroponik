@@ -332,7 +332,6 @@ function updateCirculationUI(isOn) {
 // 7. POLLING REAL-TIME DARI GOOGLE APPS SCRIPT
 // ==============================================================
 let lastRecordedTimestamp = null; // Menyimpan waktu terakhir agar data duplikat tidak diplot ulang
-
 async function fetchLatestFromSheets() {
   if (!GAS_URL.includes("http")) return;
   try {
@@ -340,40 +339,42 @@ async function fetchLatestFromSheets() {
     const json = await response.json();
 
     if (json.status === "success" && json.data) {
-      const waktuServer = new Date(json.data.waktu).getTime();
-      const waktuSekarang = Date.now();
-      const selisihDetik = Math.floor((waktuSekarang - waktuServer) / 1000);
+      console.log("[DEBUG DATA SHEETS]", json.data); // Cek isi data di Console F12
 
-      // ESP32 normalnya mengirim tiap 30 detik. Beri toleransi 75 detik.
-      if (isNaN(waktuServer) || selisihDetik > 75) {
-        // --- KONDISI ESP32 MATI / OFFLINE ---
-        tandaiEspOffline(selisihDetik, json.data.waktu);
-        return;
-      }
+      // 1. LANGSUNG TAMPILKAN NILAI SENSOR KE ELEMEN HTML
+      updateSensorData(
+        json.data.suhu, 
+        json.data.ph, 
+        json.data.ppm, 
+        json.data.err_sensor, 
+        json.data.waktu
+      );
 
-      // --- KONDISI ESP32 AKTIF (ONLINE) ---
-      kembalikanStatusOnline();
-
-      // Update status sakelar pompa sesuai pembacaan server
+      // 2. Perbarui status sakelar pompa
       updatePumpUI('a', json.data.pompa_a === "ON");
       updatePumpUI('b', json.data.pompa_b === "ON");
       updatePumpUI('ph', json.data.pompa_ph === "ON");
       updateCirculationUI(json.data.pompa_sirkulasi === "ON");
 
-      // Cek apakah data ini benar-benar data baru (mencegah plot berulang)
-      if (json.data.waktu !== lastRecordedTimestamp) {
-        lastRecordedTimestamp = json.data.waktu;
-        updateSensorData(
-          json.data.suhu, 
-          json.data.ph, 
-          json.data.ppm, 
-          json.data.err_sensor, 
-          json.data.waktu // Teruskan waktu asli dari Sheets
-        );
+      // 3. Evaluasi status online secara aman tanpa memblokir tampilan
+      const waktuServer = new Date(json.data.waktu).getTime();
+      const waktuSekarang = Date.now();
+      
+      if (!isNaN(waktuServer)) {
+        const selisihDetik = Math.abs(Math.floor((waktuSekarang - waktuServer) / 1000));
+        // Jika data terakhir masih baru (< 120 detik), tandai online
+        if (selisihDetik <= 120) {
+          kembalikanStatusOnline();
+        } else {
+          tandaiEspOffline(selisihDetik, json.data.waktu);
+        }
+      } else {
+        // Jika format tanggal tidak bisa di-parse, tetap biarkan online
+        kembalikanStatusOnline();
       }
     }
   } catch (e) {
-    console.warn("Gagal sinkronisasi data dengan Google Sheets:", e);
+    console.error("Gagal membaca dari Google Sheets:", e);
   }
 }
 
