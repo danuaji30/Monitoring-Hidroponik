@@ -1,11 +1,15 @@
 // ==============================================================
-// 1. KONFIGURASI WEB APP GOOGLE APPS SCRIPT & KREDENSIAL
+// 1. KONFIGURASI WEB APP GOOGLE APPS SCRIPT
 // ==============================================================
 const GAS_URL = "https://script.google.com/macros/s/AKfycbycOnRCQqVl65n79biPf16Q5UyLYrsL3NA8q0HJ1id08539OoLeZnmuwW8EGrXqgjQz/exec";
 const ADMIN_PASSWORD_BENAR = "sibibikinpusing";
 
+// Variabel data ekspor aktif & penanggalan
+let activeExportData = [];
+let currentExportDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' }); // YYYY-MM-DD
+
 // ==============================================================
-// 2. JAM REAL-TIME & TEMA TERANG / GELAP
+// 2. JAM REAL-TIME & TEMA
 // ==============================================================
 const htmlEl = document.documentElement;
 const btnTheme = document.getElementById('btn-theme');
@@ -32,17 +36,8 @@ function updateClock() {
 setInterval(updateClock, 1000);
 updateClock();
 
-// Efek Glow Mengikuti Kursor pada Kartu UI
-document.querySelectorAll('.bubble-card').forEach(card => {
-  card.addEventListener('mousemove', e => {
-    const rect = card.getBoundingClientRect();
-    card.style.setProperty('--x', `${e.clientX - rect.left}px`);
-    card.style.setProperty('--y', `${e.clientY - rect.top}px`);
-  });
-});
-
 // ==============================================================
-// 3. SISTEM AUTH ADMIN & KONTROL MANUAL INTERAKTIF
+// 3. AUTH ADMIN & KONTROL MANUAL
 // ==============================================================
 let isAdmin = false;
 const btnAuth = document.getElementById('btn-auth');
@@ -110,15 +105,8 @@ if (btnAuth) {
   });
 }
 
-if (btnLoginCancel && modalLogin) {
-  btnLoginCancel.addEventListener('click', () => modalLogin.classList.remove('show'));
-}
-
-if (modalLogin) {
-  modalLogin.addEventListener('click', (e) => {
-    if (e.target === modalLogin) modalLogin.classList.remove('show');
-  });
-}
+if (btnLoginCancel && modalLogin) btnLoginCancel.addEventListener('click', () => modalLogin.classList.remove('show'));
+if (modalLogin) modalLogin.addEventListener('click', (e) => { if (e.target === modalLogin) modalLogin.classList.remove('show'); });
 
 if (btnLoginSubmit) {
   btnLoginSubmit.addEventListener('click', () => {
@@ -132,18 +120,8 @@ if (btnLoginSubmit) {
   });
 }
 
-const inputPass = document.getElementById('login-pass');
-if (inputPass && btnLoginSubmit) {
-  inputPass.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') btnLoginSubmit.click();
-  });
-}
-
 function kirimKontrolKeServer(payload) {
-  if (!GAS_URL || !GAS_URL.startsWith("https://")) {
-    console.warn("URL GAS belum dikonfigurasi.");
-    return;
-  }
+  if (!GAS_URL || !GAS_URL.startsWith("https://")) return;
   fetch(GAS_URL, {
     method: "POST",
     mode: "no-cors",
@@ -152,7 +130,6 @@ function kirimKontrolKeServer(payload) {
   }).catch(err => console.error("Gagal sinkron perintah pompa:", err));
 }
 
-// Event Sakelar
 if (toggleMode) {
   toggleMode.addEventListener('change', (e) => {
     if (!isAdmin) return;
@@ -197,7 +174,7 @@ if (toggleCirc) {
 }
 
 // ==============================================================
-// 4. LOGIKA TARGET RENTANG MIN-MAX (PPM, pH, SUHU)
+// 4. BATAS TARGET MIN-MAX
 // ==============================================================
 let minEc = parseFloat(localStorage.getItem('minEc')) || 1000;
 let maxEc = parseFloat(localStorage.getItem('maxEc')) || 1200;
@@ -223,67 +200,37 @@ function renderRangeLabels() {
 }
 renderRangeLabels();
 
-const btnSaveEc = document.getElementById('btn-save-ec');
-if (btnSaveEc) {
-  btnSaveEc.addEventListener('click', () => {
+const setupSaveBtn = (btnId, minId, maxId, sMin, sMax, setMin, setMax, act) => {
+  const btn = document.getElementById(btnId);
+  if (!btn) return;
+  btn.addEventListener('click', () => {
     if (!isAdmin) return;
-    const minV = parseFloat(document.getElementById('in-min-ec')?.value);
-    const maxV = parseFloat(document.getElementById('in-max-ec')?.value);
+    const minV = parseFloat(document.getElementById(minId)?.value);
+    const maxV = parseFloat(document.getElementById(maxId)?.value);
     if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
-      minEc = minV; maxEc = maxV;
-      localStorage.setItem('minEc', minEc);
-      localStorage.setItem('maxEc', maxEc);
+      setMin(minV); setMax(maxV);
+      localStorage.setItem(sMin, minV);
+      localStorage.setItem(sMax, maxV);
       renderRangeLabels();
-      kirimKontrolKeServer({ action: "set_target", min_ec: minEc, max_ec: maxEc, auth_key: ADMIN_PASSWORD_BENAR });
-      alert("✅ Rentang PPM berhasil disimpan!");
+      kirimKontrolKeServer({ action: "set_target", ...act(minV, maxV), auth_key: ADMIN_PASSWORD_BENAR });
+      alert("✅ Pengaturan target disimpan!");
     } else {
-      alert("⚠️ Nilai Min PPM harus lebih kecil dari Max PPM!");
+      alert("⚠️ Nilai Min harus lebih kecil dari Max!");
     }
   });
-}
+};
 
-const btnSavePh = document.getElementById('btn-save-ph');
-if (btnSavePh) {
-  btnSavePh.addEventListener('click', () => {
-    if (!isAdmin) return;
-    const minV = parseFloat(document.getElementById('in-min-ph')?.value);
-    const maxV = parseFloat(document.getElementById('in-max-ph')?.value);
-    if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
-      minPh = minV; maxPh = maxV;
-      localStorage.setItem('minPh', minPh);
-      localStorage.setItem('maxPh', maxPh);
-      renderRangeLabels();
-      kirimKontrolKeServer({ action: "set_target", min_ph: minPh, max_ph: maxPh, auth_key: ADMIN_PASSWORD_BENAR });
-      alert("✅ Rentang pH berhasil disimpan!");
-    } else {
-      alert("⚠️ Nilai Min pH harus lebih kecil dari Max pH!");
-    }
-  });
-}
-
-const btnSaveSuhu = document.getElementById('btn-save-suhu');
-if (btnSaveSuhu) {
-  btnSaveSuhu.addEventListener('click', () => {
-    if (!isAdmin) return;
-    const minV = parseFloat(document.getElementById('in-min-suhu')?.value);
-    const maxV = parseFloat(document.getElementById('in-max-suhu')?.value);
-    if (!isNaN(minV) && !isNaN(maxV) && minV < maxV) {
-      minSuhu = minV; maxSuhu = maxV;
-      localStorage.setItem('minSuhu', minSuhu);
-      localStorage.setItem('maxSuhu', maxSuhu);
-      renderRangeLabels();
-      kirimKontrolKeServer({ action: "set_target", min_suhu: minSuhu, max_suhu: maxSuhu, auth_key: ADMIN_PASSWORD_BENAR });
-      alert("✅ Rentang Suhu berhasil disimpan!");
-    } else {
-      alert("⚠️ Nilai Min Suhu harus lebih kecil dari Max Suhu!");
-    }
-  });
-}
+setupSaveBtn('btn-save-ec', 'in-min-ec', 'in-max-ec', 'minEc', 'maxEc', v => minEc = v, v => maxEc = v, (min, max) => ({ min_ec: min, max_ec: max }));
+setupSaveBtn('btn-save-ph', 'in-min-ph', 'in-max-ph', 'minPh', 'maxPh', v => minPh = v, v => maxPh = v, (min, max) => ({ min_ph: min, max_ph: max }));
+setupSaveBtn('btn-save-suhu', 'in-min-suhu', 'in-max-suhu', 'minSuhu', 'maxSuhu', v => minSuhu = v, v => maxSuhu = v, (min, max) => ({ min_suhu: min, max_suhu: max }));
 
 // ==============================================================
-// 5. INISIALISASI GRAFIK CHART.JS (3 DATASET)
+// 5. INISIALISASI CHART.JS DENGAN FITUR GESER (PAN/ZOOM)
 // ==============================================================
-let historyData = [];
+let currentChartMode = 'today';
+let todayDataSeries = [];
+let historyHourlySeries = [];
+
 const chartCanvas = document.getElementById('sensorChart');
 let sensorChart = null;
 
@@ -294,17 +241,24 @@ if (chartCanvas) {
     data: {
       labels: [],
       datasets: [
-        { label: 'pH Air', borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, data: [], tension: 0.35, pointRadius: 2, yAxisID: 'y' },
-        { label: 'Nutrisi (ppm)', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, data: [], tension: 0.35, pointRadius: 2, yAxisID: 'y1' },
-        { label: 'Suhu (°C)', borderColor: '#f59e0b', data: [], tension: 0.35, pointRadius: 2, yAxisID: 'y' }
+        { label: 'pH Air', borderColor: '#3b82f6', backgroundColor: 'rgba(59,130,246,0.08)', fill: true, data: [], tension: 0.3, pointRadius: 2, yAxisID: 'y' },
+        { label: 'Nutrisi (ppm)', borderColor: '#10b981', backgroundColor: 'rgba(16,185,129,0.08)', fill: true, data: [], tension: 0.3, pointRadius: 2, yAxisID: 'y1' },
+        { label: 'Suhu (°C)', borderColor: '#f59e0b', data: [], tension: 0.3, pointRadius: 2, yAxisID: 'y' }
       ]
     },
     options: {
       responsive: true,
       maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: '#8b9bb4', boxWidth: 12, font: { size: 11 } } } },
+      interaction: { mode: 'index', intersect: false },
+      plugins: {
+        legend: { labels: { color: '#8b9bb4', boxWidth: 12, font: { size: 11 } } },
+        zoom: {
+          pan: { enabled: true, mode: 'x', modifierKey: null },
+          zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+        }
+      },
       scales: {
-        x: { ticks: { color: '#8b9bb4', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.1)' } },
+        x: { ticks: { color: '#8b9bb4', font: { size: 10 }, maxRotation: 0 }, grid: { color: 'rgba(148,163,184,0.1)' } },
         y: { type: 'linear', position: 'left', ticks: { color: '#8b9bb4', font: { size: 10 } }, grid: { color: 'rgba(148,163,184,0.1)' } },
         y1: { type: 'linear', position: 'right', ticks: { color: '#10b981', font: { size: 10 } }, grid: { drawOnChartArea: false } }
       }
@@ -312,32 +266,270 @@ if (chartCanvas) {
   });
 }
 
+const btnResetZoom = document.getElementById('btn-reset-zoom');
+if (btnResetZoom && sensorChart) {
+  btnResetZoom.addEventListener('click', () => sensorChart.resetZoom());
+}
+
 // ==============================================================
-// 6. UPDATE DATA TELEMETRI & INDIKATOR VISUAL
+// 6. LOGIKA PEMUATAN DATA GRAFIK (HARI INI, RIWAYAT, DATE PICKER)
 // ==============================================================
-function updateSensorData(suhu, ph, ec, statusDiag = "NORMAL", waktuAsliSheets = null) {
+async function loadTodayData() {
+  if (!GAS_URL) return;
+  try {
+    const res = await fetch(`${GAS_URL}?action=read_today`, { method: "GET", redirect: "follow" });
+    const json = await res.json();
+    if (json.status === "success" && Array.isArray(json.data)) {
+      todayDataSeries = [];
+      activeExportData = [];
+      currentExportDate = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+
+      json.data.forEach(item => {
+        const d = new Date(item.waktu);
+        const tglWaktu = `${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
+        const jam = d.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+
+        const rowObj = { fullTime: tglWaktu, time: jam, ph: item.ph, ec: item.ppm, suhu: item.suhu, status: item.err_sensor };
+        todayDataSeries.push(rowObj);
+        activeExportData.push(rowObj);
+      });
+
+      if (currentChartMode === 'today') renderTodayChart();
+    }
+  } catch (err) {
+    console.warn("Gagal memuat data hari ini:", err);
+  }
+}
+
+function renderTodayChart() {
+  if (!sensorChart) return;
+  sensorChart.data.labels = todayDataSeries.map(i => i.time);
+  sensorChart.data.datasets[0].data = todayDataSeries.map(i => i.ph);
+  sensorChart.data.datasets[1].data = todayDataSeries.map(i => i.ec);
+  sensorChart.data.datasets[2].data = todayDataSeries.map(i => i.suhu);
+  sensorChart.update();
+  sensorChart.resetZoom();
+  document.getElementById('log-counter').innerText = `Data Hari Ini: ${todayDataSeries.length} sampel`;
+}
+
+async function loadHistoryData() {
+  if (!GAS_URL) return;
+  try {
+    document.getElementById('log-counter').innerText = "Memuat riwayat jam...";
+    const res = await fetch(`${GAS_URL}?action=read_hourly_history`, { method: "GET", redirect: "follow" });
+    const json = await res.json();
+    if (json.status === "success" && Array.isArray(json.data)) {
+      historyHourlySeries = json.data;
+      if (currentChartMode === 'history') renderHistoryChart();
+    }
+  } catch (err) {
+    console.warn("Gagal memuat riwayat per jam:", err);
+  }
+}
+
+function renderHistoryChart() {
+  if (!sensorChart) return;
+  sensorChart.data.labels = historyHourlySeries.map(i => i.label);
+  sensorChart.data.datasets[0].data = historyHourlySeries.map(i => i.avg_ph);
+  sensorChart.data.datasets[1].data = historyHourlySeries.map(i => i.avg_ppm);
+  sensorChart.data.datasets[2].data = historyHourlySeries.map(i => i.avg_suhu);
+  sensorChart.update();
+  sensorChart.resetZoom();
+  document.getElementById('log-counter').innerText = `Riwayat Agregasi: ${historyHourlySeries.length} jam (Geser untuk telusuri)`;
+}
+
+const btnModeToday = document.getElementById('btn-mode-today');
+const btnModeHistory = document.getElementById('btn-mode-history');
+
+if (btnModeToday && btnModeHistory) {
+  btnModeToday.addEventListener('click', () => {
+    currentChartMode = 'today';
+    btnModeToday.classList.add('active');
+    btnModeHistory.classList.remove('active');
+    renderTodayChart();
+  });
+
+  btnModeHistory.addEventListener('click', () => {
+    currentChartMode = 'history';
+    btnModeHistory.classList.add('active');
+    btnModeToday.classList.remove('active');
+    if (historyHourlySeries.length === 0) {
+      loadHistoryData();
+    } else {
+      renderHistoryChart();
+    }
+  });
+}
+
+// LOGIKA DATE PICKER
+const inputDateFilter = document.getElementById('input-date-filter');
+const todayString = new Date().toLocaleDateString('en-CA', { timeZone: 'Asia/Jakarta' });
+
+if (inputDateFilter) {
+  inputDateFilter.max = todayString;
+  inputDateFilter.value = todayString;
+
+  inputDateFilter.addEventListener('change', async (e) => {
+    const selectedDate = e.target.value;
+    if (!selectedDate) return;
+
+    if (selectedDate === todayString) {
+      currentChartMode = 'today';
+      btnModeToday.classList.add('active');
+      btnModeHistory.classList.remove('active');
+      loadTodayData();
+      return;
+    }
+
+    currentChartMode = 'custom_date';
+    btnModeToday.classList.remove('active');
+    btnModeHistory.classList.remove('active');
+    await loadDataByDate(selectedDate);
+  });
+}
+
+async function loadDataByDate(dateStr) {
+  if (!GAS_URL) return;
+  const logCounter = document.getElementById('log-counter');
+  if (logCounter) logCounter.innerText = `Memuat data tanggal ${dateStr}...`;
+
+  try {
+    const res = await fetch(`${GAS_URL}?action=read_by_date&date=${dateStr}`, { method: "GET", redirect: "follow" });
+    const json = await res.json();
+
+    if (json.status === "success" && Array.isArray(json.data)) {
+      currentExportDate = dateStr;
+      activeExportData = [];
+
+      if (json.data.length === 0) {
+        alert(`ℹ️ Tidak ada catatan data sensor pada tanggal ${dateStr}.`);
+        if (logCounter) logCounter.innerText = `Data ${dateStr}: 0 sampel`;
+        if (sensorChart) {
+          sensorChart.data.labels = [];
+          sensorChart.data.datasets.forEach(ds => ds.data = []);
+          sensorChart.update();
+        }
+        return;
+      }
+
+      const labels = [], phPoints = [], ecPoints = [], suhuPoints = [];
+      json.data.forEach(item => {
+        const d = new Date(item.waktu);
+        const tglWaktu = `${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
+        const jam = d.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+
+        labels.push(jam);
+        phPoints.push(item.ph);
+        ecPoints.push(item.ppm);
+        suhuPoints.push(item.suhu);
+
+        activeExportData.push({ fullTime: tglWaktu, time: jam, ph: item.ph, ec: item.ppm, suhu: item.suhu, status: item.err_sensor });
+      });
+
+      if (sensorChart) {
+        sensorChart.data.labels = labels;
+        sensorChart.data.datasets[0].data = phPoints;
+        sensorChart.data.datasets[1].data = ecPoints;
+        sensorChart.data.datasets[2].data = suhuPoints;
+        sensorChart.update();
+        sensorChart.resetZoom();
+      }
+
+      if (logCounter) {
+        logCounter.innerText = `Riwayat ${dateStr}: ${json.data.length} sampel (Siap Unduh CSV)`;
+      }
+    }
+  } catch (err) {
+    console.error(`Gagal mengambil data tanggal ${dateStr}:`, err);
+  }
+}
+
+// Inisialisasi awal saat web dibuka
+loadTodayData();
+
+// ==============================================================
+// 7. POLLING DATA REAL-TIME TIAP 6 DETIK
+// ==============================================================
+let lastRecordedTimestamp = null;
+
+async function fetchLatestFromSheets() {
+  if (!GAS_URL || !GAS_URL.startsWith("https://")) return;
+
+  try {
+    const response = await fetch(`${GAS_URL}?action=read_latest`, { method: "GET", redirect: "follow" });
+    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
+    const json = await response.json();
+
+    if (json.status === "success" && json.data) {
+      if (json.data.waktu !== lastRecordedTimestamp) {
+        lastRecordedTimestamp = json.data.waktu;
+        updateSensorCards(json.data.suhu, json.data.ph, json.data.ppm, json.data.err_sensor);
+
+        const d = new Date(json.data.waktu);
+        const tglWaktu = `${d.toLocaleDateString('id-ID')} ${d.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
+        const jam = d.toLocaleTimeString('id-ID', { hour12: false, hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+
+        const rowObj = { fullTime: tglWaktu, time: jam, ph: Number(json.data.ph), ec: Math.round(Number(json.data.ppm)), suhu: Number(json.data.suhu), status: json.data.err_sensor };
+
+        todayDataSeries.push(rowObj);
+
+        if (currentChartMode === 'today') {
+          activeExportData.push(rowObj);
+          renderTodayChart();
+        }
+      } else {
+        updateSensorCards(json.data.suhu, json.data.ph, json.data.ppm, json.data.err_sensor);
+      }
+
+      if (json.data.otomatis !== undefined && toggleMode) {
+        toggleMode.checked = json.data.otomatis;
+        const txtMode = document.getElementById('txt-mode');
+        if (txtMode) txtMode.innerText = json.data.otomatis ? "Otomasi Dosing" : "Mode Manual";
+        updateDosingInputsState();
+      }
+
+      updatePumpUI('a', json.data.pompa_a === "ON");
+      updatePumpUI('b', json.data.pompa_b === "ON");
+      updatePumpUI('ph', json.data.pompa_ph === "ON");
+      updateCirculationUI(json.data.pompa_sirkulasi === "ON");
+
+      const waktuServer = new Date(json.data.waktu).getTime();
+      const selisihDetik = Math.abs(Math.floor((Date.now() - waktuServer) / 1000));
+      if (!isNaN(waktuServer) && selisihDetik > 120) {
+        tandaiEspOffline(selisihDetik);
+      } else {
+        kembalikanStatusOnline();
+      }
+    }
+  } catch (err) {
+    console.error("Gagal sinkronisasi data dari Sheets:", err);
+  }
+}
+
+fetchLatestFromSheets();
+setInterval(fetchLatestFromSheets, 6000);
+
+// ==============================================================
+// 8. UPDATE KARTU & STATUS SAKELAR
+// ==============================================================
+function updateSensorCards(suhu, ph, ec, statusDiag = "NORMAL") {
+  const setVal = (id, val) => { const el = document.getElementById(id); if (el) el.innerText = val; };
+  setVal('val-ph', Number(ph).toFixed(2));
+  setVal('val-ec', Math.round(Number(ec)));
+  setVal('val-suhu', Number(suhu).toFixed(1));
+
   const boxPh = document.getElementById('box-ph');
   const boxEc = document.getElementById('box-ec');
   const boxSuhu = document.getElementById('box-suhu');
-
   if (boxPh) boxPh.style.borderColor = "var(--border)";
   if (boxEc) boxEc.style.borderColor = "var(--border)";
   if (boxSuhu) boxSuhu.style.borderColor = "var(--border)";
-
-  const elValPh = document.getElementById('val-ph');
-  const elValEc = document.getElementById('val-ec');
-  const elValSuhu = document.getElementById('val-suhu');
-
-  if (elValPh) elValPh.innerText = Number(ph).toFixed(2);
-  if (elValEc) elValEc.innerText = Math.round(Number(ec));
-  if (elValSuhu) elValSuhu.innerText = Number(suhu).toFixed(1);
 
   const badge = document.getElementById('overall-badge');
   if (badge) {
     if (statusDiag !== "NORMAL") {
       badge.innerText = `⚠️ ANOMALI: ${statusDiag}`;
       badge.className = "badge-pill danger";
-
       if (statusDiag.includes("PH") && boxPh) boxPh.style.borderColor = "var(--accent-red)";
       if ((statusDiag.includes("EC") || statusDiag.includes("KERING")) && boxEc) boxEc.style.borderColor = "var(--accent-amber)";
       if (statusDiag.includes("DS18B20") && boxSuhu) boxSuhu.style.borderColor = "var(--accent-red)";
@@ -355,30 +547,6 @@ function updateSensorData(suhu, ph, ec, statusDiag = "NORMAL", waktuAsliSheets =
       badge.className = "badge-pill";
     }
   }
-
-  // Format Waktu Berdasarkan Timestamp Spreadsheet
-  let dateObj = new Date();
-  if (waktuAsliSheets) {
-    const parsed = new Date(waktuAsliSheets);
-    if (!isNaN(parsed.getTime())) dateObj = parsed;
-  }
-
-  const tglWaktu = `${dateObj.toLocaleDateString('id-ID')} ${dateObj.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
-  const jamSaja = dateObj.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' });
-
-  historyData.push({ fullTime: tglWaktu, time: jamSaja, ph: Number(ph), ec: Number(ec), suhu: Number(suhu), status: statusDiag });
-
-  const logCounter = document.getElementById('log-counter');
-  if (logCounter) logCounter.innerText = `Data Terekam: ${historyData.length} sampel`;
-
-  if (sensorChart) {
-    const recent = historyData.slice(-15);
-    sensorChart.data.labels = recent.map(i => i.time);
-    sensorChart.data.datasets[0].data = recent.map(i => i.ph);
-    sensorChart.data.datasets[1].data = recent.map(i => i.ec);
-    sensorChart.data.datasets[2].data = recent.map(i => i.suhu);
-    sensorChart.update();
-  }
 }
 
 function updatePumpUI(prefix, isOn) {
@@ -393,9 +561,7 @@ function updatePumpUI(prefix, isOn) {
     txtEl.innerText = isOn ? "Menyala" : "Mati";
     txtEl.style.color = isOn ? "var(--accent-green)" : "var(--text-muted)";
   }
-  if (cardEl) {
-    cardEl.className = isOn ? "bubble-card relay-card active-glow" : "bubble-card relay-card";
-  }
+  if (cardEl) cardEl.className = isOn ? "bubble-card relay-card active-glow" : "bubble-card relay-card";
 }
 
 function updateCirculationUI(isOn) {
@@ -410,26 +576,20 @@ function updateCirculationUI(isOn) {
     txtEl.innerText = isOn ? "Mengalir (Aktif)" : "Mati";
     txtEl.style.color = isOn ? "var(--accent-cyan)" : "var(--text-muted)";
   }
-  if (cardEl) {
-    cardEl.className = isOn ? "circulation-card bubble-card active-flow" : "circulation-card bubble-card";
-  }
+  if (cardEl) cardEl.className = isOn ? "circulation-card bubble-card active-flow" : "circulation-card bubble-card";
 }
 
-function tandaiEspOffline(selisihDetik, waktuTerakhir) {
+function tandaiEspOffline(selisihDetik) {
   const badge = document.getElementById('overall-badge');
   if (badge) {
     badge.className = "badge-pill danger";
-    const menitLalu = Math.floor(selisihDetik / 60);
-    badge.innerText = menitLalu > 0 
-      ? `🔴 ESP32 OFFLINE (Terputus ${menitLalu} mnt lalu)` 
-      : `🔴 ESP32 OFFLINE (${selisihDetik} dtk lalu)`;
+    const menit = Math.floor(selisihDetik / 60);
+    badge.innerText = menit > 0 ? `🔴 ESP32 OFFLINE (${menit} mnt lalu)` : `🔴 ESP32 OFFLINE (${selisihDetik} dtk lalu)`;
   }
-
-  const setDim = (id, val) => { const el = document.getElementById(id); if (el) el.style.opacity = val; };
-  setDim('val-ph', "0.45");
-  setDim('val-ec', "0.45");
-  setDim('val-suhu', "0.45");
-
+  ['val-ph', 'val-ec', 'val-suhu'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = "0.45";
+  });
   updatePumpUI('a', false);
   updatePumpUI('b', false);
   updatePumpUI('ph', false);
@@ -437,108 +597,57 @@ function tandaiEspOffline(selisihDetik, waktuTerakhir) {
 }
 
 function kembalikanStatusOnline() {
-  const setNormal = (id) => { const el = document.getElementById(id); if (el) el.style.opacity = "1.0"; };
-  setNormal('val-ph');
-  setNormal('val-ec');
-  setNormal('val-suhu');
+  ['val-ph', 'val-ec', 'val-suhu'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.style.opacity = "1.0";
+  });
 }
 
 // ==============================================================
-// 7. POLLING REAL-TIME DARI GOOGLE APPS SCRIPT
-// ==============================================================
-let lastRecordedTimestamp = null;
-
-async function fetchLatestFromSheets() {
-  if (!GAS_URL || !GAS_URL.startsWith("https://")) return;
-
-  try {
-    const response = await fetch(`${GAS_URL}?action=read_latest`, {
-      method: "GET",
-      redirect: "follow"
-    });
-
-    if (!response.ok) throw new Error(`HTTP Error: ${response.status}`);
-    const json = await response.json();
-
-    if (json.status === "success" && json.data) {
-      console.log("[DATA SHEETS TERBACA]:", json.data);
-
-      // Cek apakah data benar-benar baru sebelum di-append ke grafik
-      if (json.data.waktu !== lastRecordedTimestamp) {
-        lastRecordedTimestamp = json.data.waktu;
-        updateSensorData(
-          json.data.suhu, 
-          json.data.ph, 
-          json.data.ppm, 
-          json.data.err_sensor, 
-          json.data.waktu
-        );
-      } else {
-        // Jika data sama, tetap perbarui kartu angka tanpa menambah titik grafik baru
-        const elValPh = document.getElementById('val-ph');
-        const elValEc = document.getElementById('val-ec');
-        const elValSuhu = document.getElementById('val-suhu');
-        if (elValPh) elValPh.innerText = Number(json.data.ph).toFixed(2);
-        if (elValEc) elValEc.innerText = Math.round(Number(json.data.ppm));
-        if (elValSuhu) elValSuhu.innerText = Number(json.data.suhu).toFixed(1);
-      }
-
-      // Sinkronkan status sakelar mode & pompa dari spreadsheet
-      if (json.data.otomatis !== undefined && toggleMode) {
-        toggleMode.checked = json.data.otomatis;
-        const txtMode = document.getElementById('txt-mode');
-        if (txtMode) txtMode.innerText = json.data.otomatis ? "Otomasi Dosing" : "Mode Manual";
-        updateDosingInputsState();
-      }
-
-      updatePumpUI('a', json.data.pompa_a === "ON");
-      updatePumpUI('b', json.data.pompa_b === "ON");
-      updatePumpUI('ph', json.data.pompa_ph === "ON");
-      updateCirculationUI(json.data.pompa_sirkulasi === "ON");
-
-      // Deteksi Heartbeat ESP32 (Toleransi 120 detik)
-      const waktuServer = new Date(json.data.waktu).getTime();
-      const waktuSekarang = Date.now();
-      
-      if (!isNaN(waktuServer)) {
-        const selisihDetik = Math.abs(Math.floor((waktuSekarang - waktuServer) / 1000));
-        if (selisihDetik <= 120) {
-          kembalikanStatusOnline();
-        } else {
-          tandaiEspOffline(selisihDetik, json.data.waktu);
-        }
-      } else {
-        kembalikanStatusOnline();
-      }
-    }
-  } catch (err) {
-    console.error("Gagal sinkronisasi data dari Google Sheets:", err);
-  }
-}
-
-// Mulai polling langsung saat web dibuka, lalu ulangi setiap 6 detik
-fetchLatestFromSheets();
-setInterval(fetchLatestFromSheets, 6000);
-
-// ==============================================================
-// 8. EKSPOR DATA SENSOR (CSV)
+// 9. UNDUH CSV DINAMIS & RESET CACHE LOKAL
 // ==============================================================
 const btnDownload = document.getElementById('btn-download');
 if (btnDownload) {
   btnDownload.addEventListener('click', () => {
-    if (historyData.length === 0) {
-      alert("Belum ada data sensor yang terekam.");
+    const dateInput = document.getElementById('input-date-filter');
+    const targetDate = (dateInput && dateInput.value) ? dateInput.value : currentExportDate;
+
+    if (!activeExportData || activeExportData.length === 0) {
+      alert(`⚠️ Tidak ada data sensor untuk tanggal ${targetDate}.`);
       return;
     }
-    let csv = "data:text/csv;charset=utf-8,Tanggal & Waktu,pH,Nutrisi TDS (ppm),Suhu (C),Diagnosa Sensor\n";
-    historyData.forEach(r => {
-      csv += `"${r.fullTime}",${r.ph},${r.ec},${r.suhu},"${r.status}"\n`;
+
+    let csvContent = "\uFEFFWaktu Pencatatan,pH Air,Nutrisi TDS (PPM),Suhu Air (°C),Diagnosa Sensor\n";
+    activeExportData.forEach(r => {
+      csvContent += `"${r.fullTime}",${Number(r.ph).toFixed(2)},${Math.round(Number(r.ec))},${Number(r.suhu).toFixed(1)},"${r.status || 'NORMAL'}"\n`;
     });
+
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csv));
-    link.setAttribute("download", `Log_Hidroponik_Pakcoy_${new Date().toISOString().slice(0,10)}.csv`);
+    link.setAttribute("href", url);
+    link.setAttribute("download", `Log_Hidroponik_Pakcoy_${targetDate}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+  });
+}
+
+const btnResetCache = document.getElementById('btn-reset-cache');
+if (btnResetCache) {
+  btnResetCache.addEventListener('click', () => {
+    if (!confirm("Hapus seluruh cache riwayat lokal di browser ini? Data asli di Google Sheets tetap aman.")) return;
+    localStorage.removeItem('hydroHistoryData');
+    todayDataSeries = [];
+    historyHourlySeries = [];
+    activeExportData = [];
+    if (sensorChart) {
+      sensorChart.data.labels = [];
+      sensorChart.data.datasets.forEach(ds => ds.data = []);
+      sensorChart.update();
+    }
+    loadTodayData();
+    alert("✅ Cache riwayat lokal berhasil dibersihkan!");
   });
 }
