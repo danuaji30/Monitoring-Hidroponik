@@ -95,7 +95,21 @@ input:checked + .slider { background-color: var(--accent-green); border-color: v
 input:checked + .slider:before { transform: translateX(20px); background-color: #ffffff; }
 input:disabled + .slider { opacity: 0.5; cursor: not-allowed; }
 
-.admin-only.locked { opacity: 0.6; pointer-events: none; filter: grayscale(0.5); }
+/* ==============================================================
+   TAMPILAN ELEMEN TERKUNCI & KURSOR LINGKARAN DICORET
+   ============================================================== */
+.admin-only.locked {
+  opacity: 0.55;
+  filter: grayscale(0.6);
+  cursor: not-allowed !important; /* Menampilkan kursor lingkaran dicoret (🚫) */
+  user-select: none;              /* Mencegah teks terblokir saat disorot */
+}
+
+/* Pastikan semua elemen di dalamnya (teks, toggle, slider, tombol) ikut menampilkan kursor dicoret */
+.admin-only.locked * {
+  cursor: not-allowed !important;
+  pointer-events: none;           /* Mencegah klik/interaksi pada sakelar & input */
+}
 
 .target-config-section h3 { margin-bottom: 16px; font-size: 1rem; }
 .row-inputs { display: flex; gap: 8px; margin-top: 6px; }
