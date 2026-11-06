@@ -16,7 +16,7 @@
     <!-- HEADER -->
     <header class="header">
       <div class="logo-area">
-        <h1>🌱 HydroSmart <span>Pakcoy Edition</span></h1>
+        <h1>🌱 HydroSmart <span></span></h1>
         <div class="realtime-clock">
           <span id="rt-date">KAMIS, 6 NOVEMBER 2026</span> • <span id="rt-time">09:00:00</span>
         </div>
@@ -69,14 +69,50 @@
       <div class="chart-header">
         <div class="chart-mode-group">
           <button id="btn-mode-today" class="btn-mode active">📅 Hari Ini</button>
-          <button id="btn-mode-history" class="btn-mode">📜 Rata-rata/Jam</button>
+          <button id="btn-mode-history" class="btn-mode">📊 Rata-rata/Jam</button>
         </div>
 
-        <div class="date-picker-wrapper">
-          <label for="input-date-filter" class="date-label">Pilih Tanggal:</label>
+        <!-- Filter Hari (Mode Hari Ini / Tanggal Tertentu) -->
+        <div class="date-picker-wrapper" id="wrapper-date-filter">
+          <label for="input-date-filter" class="date-label">Pilih Hari:</label>
           <input type="date" id="input-date-filter" class="date-input">
+          <button id="btn-quick-today" class="btn-quick-today" type="button" title="Kembali ke hari ini">Hari Ini</button>
         </div>
 
+        <!-- Filter Bulan (Mode Rata-rata/Jam) -->
+        <div class="date-picker-wrapper" id="wrapper-month-filter" style="display: none;">
+          <label class="date-label">Pilih Periode:</label>
+          
+          <!-- Pilihan Bulan -->
+          <select id="select-month" class="date-input select-picker">
+            <option value="01">Januari</option>
+            <option value="02">Februari</option>
+            <option value="03">Maret</option>
+            <option value="04">April</option>
+            <option value="05">Mei</option>
+            <option value="06">Juni</option>
+            <option value="07">Juli</option>
+            <option value="08">Agustus</option>
+            <option value="09">September</option>
+            <option value="10">Oktober</option>
+            <option value="11">November</option>
+            <option value="12">Desember</option>
+          </select>
+
+          <!-- Pilihan Tahun -->
+          <select id="select-year" class="date-input select-picker">
+            <option value="2025">2026</option>
+            <option value="2026">2027</option>
+            <option value="2027">2028</option>
+            <option value="2027">2029</option>
+          </select>
+
+          <!-- Tombol Pintas Bulan Ini -->
+          <button id="btn-quick-month" class="btn-quick-today" type="button" title="Kembali ke bulan ini">Bulan Ini</button>
+
+          <!-- Input tersembunyi untuk menjaga kompatibilitas fungsi lain -->
+          <input type="hidden" id="input-month-filter">
+        </div>
         <div class="chart-btn-group">
           <button id="btn-reset-zoom" class="btn-sm" title="Kembalikan posisi grafik">↺ Reset Geser</button>
           <button id="btn-download" class="btn-sm">📥 Unduh CSV</button>
@@ -91,74 +127,96 @@
     <!-- KONTROL MODE & POMPA RELAY -->
     <section class="control-section">
       <div class="section-title">
-        <h3>⚙️ Kontrol Pompa & Otomasi</h3>
-        <div class="mode-switch admin-only locked">
+        <h3>⚙️ Status Pompa & Otomasi</h3>
+        <div class="mode-switch">
           <span id="txt-mode">Otomasi Dosing</span>
-          <label class="switch">
-            <input type="checkbox" id="toggle-mode" checked disabled>
-            <span class="slider round"></span>
-          </label>
+          <div class="switch-container admin-only locked" title="Ubah Mode Otomasi (Khusus Admin)">
+            <label class="switch">
+              <input type="checkbox" id="toggle-mode" checked disabled>
+              <span class="slider round"></span>
+            </label>
+          </div>
         </div>
       </div>
 
       <div class="grid-4">
         <!-- POMPA A -->
-        <div class="bubble-card relay-card admin-only locked" id="card-a">
+        <div class="bubble-card relay-card" id="card-a">
           <div class="relay-head">
-            <span class="dot" id="dot-a"></span>
+            <span class="pump-icon">💧</span>
             <h4>Pompa Nutrisi A</h4>
+            <span class="dot" id="dot-a"></span>
           </div>
           <div class="relay-body">
-            <span class="status-txt" id="status-txt-a">Mati</span>
-            <label class="switch">
-              <input type="checkbox" id="toggle-a" disabled>
-              <span class="slider round"></span>
-            </label>
+            <div class="relay-status-pill" id="pill-a">
+              <span class="status-txt" id="status-txt-a">Mati</span>
+            </div>
+            <div class="switch-container admin-only locked" title="Kontrol Pompa Nutrisi A (Khusus Admin)">
+              <label class="switch">
+                <input type="checkbox" id="toggle-a" disabled>
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
         </div>
 
         <!-- POMPA B -->
-        <div class="bubble-card relay-card admin-only locked" id="card-b">
+        <div class="bubble-card relay-card" id="card-b">
           <div class="relay-head">
-            <span class="dot" id="dot-b"></span>
+            <span class="pump-icon">🌱</span>
             <h4>Pompa Nutrisi B</h4>
+            <span class="dot" id="dot-b"></span>
           </div>
           <div class="relay-body">
-            <span class="status-txt" id="status-txt-b">Mati</span>
-            <label class="switch">
-              <input type="checkbox" id="toggle-b" disabled>
-              <span class="slider round"></span>
-            </label>
+            <div class="relay-status-pill" id="pill-b">
+              <span class="status-txt" id="status-txt-b">Mati</span>
+            </div>
+            <div class="switch-container admin-only locked" title="Kontrol Pompa Nutrisi B (Khusus Admin)">
+              <label class="switch">
+                <input type="checkbox" id="toggle-b" disabled>
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
         </div>
 
         <!-- POMPA PH -->
-        <div class="bubble-card relay-card admin-only locked" id="card-ph">
+        <div class="bubble-card relay-card" id="card-ph">
           <div class="relay-head">
-            <span class="dot" id="dot-ph"></span>
+            <span class="pump-icon">🧪</span>
             <h4>Penstabil pH</h4>
+            <span class="dot" id="dot-ph"></span>
           </div>
           <div class="relay-body">
-            <span class="status-txt" id="status-txt-ph">Mati</span>
-            <label class="switch">
-              <input type="checkbox" id="toggle-ph" disabled>
-              <span class="slider round"></span>
-            </label>
+            <div class="relay-status-pill" id="pill-ph">
+              <span class="status-txt" id="status-txt-ph">Mati</span>
+            </div>
+            <div class="switch-container admin-only locked" title="Kontrol Penstabil pH (Khusus Admin)">
+              <label class="switch">
+                <input type="checkbox" id="toggle-ph" disabled>
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
         </div>
 
         <!-- POMPA SIRKULASI -->
-        <div class="bubble-card relay-card circulation-card admin-only locked" id="card-circ">
+        <div class="bubble-card relay-card circulation-card" id="card-circ">
           <div class="relay-head">
-            <span class="dot on-cyan" id="dot-circ"></span>
+            <span class="pump-icon">🔄</span>
             <h4>Pompa Sirkulasi</h4>
+            <span class="dot" id="dot-circ"></span>
           </div>
           <div class="relay-body">
-            <span class="status-txt" id="status-txt-circ">Mengalir</span>
-            <label class="switch">
-              <input type="checkbox" id="toggle-circ" checked disabled>
-              <span class="slider round"></span>
-            </label>
+            <div class="relay-status-pill" id="pill-circ">
+              <span class="status-txt" id="status-txt-circ">Mati</span>
+            </div>
+            <div class="switch-container admin-only locked" title="Kontrol Pompa Sirkulasi (Khusus Admin)">
+              <label class="switch">
+                <input type="checkbox" id="toggle-circ" disabled>
+                <span class="slider round"></span>
+              </label>
+            </div>
           </div>
         </div>
       </div>
