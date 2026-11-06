@@ -257,7 +257,7 @@ const sensorChart = new Chart(ctx, {
 // ==============================================================
 // 6. UPDATE DATA TELEMETRI & INDIKATOR VISUAL
 // ==============================================================
-function updateSensorData(suhu, ph, ec, statusDiag = "NORMAL") {
+function updateSensorData(suhu, ph, ec, statusDiag = "NORMAL", waktuAsliSheets = null) {
   const boxPh = document.getElementById('box-ph');
   const boxEc = document.getElementById('box-ec');
   const boxSuhu = document.getElementById('box-suhu');
@@ -276,17 +276,9 @@ function updateSensorData(suhu, ph, ec, statusDiag = "NORMAL") {
     badge.innerText = `⚠️ ANOMALI: ${statusDiag}`;
     badge.className = "badge-pill danger";
 
-    if (statusDiag.includes("PH")) {
-      boxPh.style.borderColor = "var(--accent-red)";
-      document.getElementById('val-ph').innerText = "ERR";
-    }
-    if (statusDiag.includes("EC") || statusDiag.includes("KERING")) {
-      boxEc.style.borderColor = "var(--accent-amber)";
-    }
-    if (statusDiag.includes("DS18B20")) {
-      boxSuhu.style.borderColor = "var(--accent-red)";
-      document.getElementById('val-suhu').innerText = "DISC";
-    }
+    if (statusDiag.includes("PH")) boxPh.style.borderColor = "var(--accent-red)";
+    if (statusDiag.includes("EC") || statusDiag.includes("KERING")) boxEc.style.borderColor = "var(--accent-amber)";
+    if (statusDiag.includes("DS18B20")) boxSuhu.style.borderColor = "var(--accent-red)";
   } else if (ec < minEc || ph < minPh) {
     badge.innerText = "● KURANG (DOSING DIPERLUKAN)";
     badge.className = "badge-pill warn";
@@ -301,13 +293,15 @@ function updateSensorData(suhu, ph, ec, statusDiag = "NORMAL") {
     badge.className = "badge-pill";
   }
 
-  const now = new Date();
-  const tglWaktu = `${now.toLocaleDateString('id-ID')} ${now.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
-  const jamSaja = now.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' });
+  // Waktu format: Gunakan waktu asli dari spreadsheet jika tersedia
+  const dateObj = waktuAsliSheets ? new Date(waktuAsliSheets) : new Date();
+  const tglWaktu = `${dateObj.toLocaleDateString('id-ID')} ${dateObj.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' })}`;
+  const jamSaja = dateObj.toLocaleTimeString('id-ID', { hour12: false, timeZone: 'Asia/Jakarta' });
 
   historyData.push({ fullTime: tglWaktu, time: jamSaja, ph, ec, suhu, status: statusDiag });
   document.getElementById('log-counter').innerText = `Data Terekam: ${historyData.length} sampel`;
 
+  // Plot grafik hanya jika ada penambahan titik baru
   const recent = historyData.slice(-15);
   sensorChart.data.labels = recent.map(i => i.time);
   sensorChart.data.datasets[0].data = recent.map(i => i.ph);
@@ -337,27 +331,49 @@ function updateCirculationUI(isOn) {
 // ==============================================================
 // 7. POLLING REAL-TIME DARI GOOGLE APPS SCRIPT
 // ==============================================================
+let lastRecordedTimestamp = null; // Menyimpan waktu terakhir agar data duplikat tidak diplot ulang
+
 async function fetchLatestFromSheets() {
   if (!GAS_URL.includes("http")) return;
   try {
     const response = await fetch(`${GAS_URL}?action=read_latest`);
     const json = await response.json();
-    if (json.status === "success" && json.data) {
-      updateSensorData(json.data.suhu, json.data.ph, json.data.ppm, json.data.err_sensor);
 
+    if (json.status === "success" && json.data) {
+      const waktuServer = new Date(json.data.waktu).getTime();
+      const waktuSekarang = Date.now();
+      const selisihDetik = Math.floor((waktuSekarang - waktuServer) / 1000);
+
+      // ESP32 normalnya mengirim tiap 30 detik. Beri toleransi 75 detik.
+      if (isNaN(waktuServer) || selisihDetik > 75) {
+        // --- KONDISI ESP32 MATI / OFFLINE ---
+        tandaiEspOffline(selisihDetik, json.data.waktu);
+        return;
+      }
+
+      // --- KONDISI ESP32 AKTIF (ONLINE) ---
+      kembalikanStatusOnline();
+
+      // Update status sakelar pompa sesuai pembacaan server
       updatePumpUI('a', json.data.pompa_a === "ON");
       updatePumpUI('b', json.data.pompa_b === "ON");
       updatePumpUI('ph', json.data.pompa_ph === "ON");
       updateCirculationUI(json.data.pompa_sirkulasi === "ON");
 
-      if (json.data.otomatis !== undefined && !isAdmin) {
-        toggleMode.checked = json.data.otomatis;
-        document.getElementById('txt-mode').innerText = json.data.otomatis ? "Otomasi Dosing" : "Mode Manual";
-        updateDosingInputsState();
+      // Cek apakah data ini benar-benar data baru (mencegah plot berulang)
+      if (json.data.waktu !== lastRecordedTimestamp) {
+        lastRecordedTimestamp = json.data.waktu;
+        updateSensorData(
+          json.data.suhu, 
+          json.data.ph, 
+          json.data.ppm, 
+          json.data.err_sensor, 
+          json.data.waktu // Teruskan waktu asli dari Sheets
+        );
       }
     }
   } catch (e) {
-    console.log("Menunggu koneksi sinkronisasi data...");
+    console.warn("Gagal sinkronisasi data dengan Google Sheets:", e);
   }
 }
 
@@ -382,3 +398,30 @@ document.getElementById('btn-download').addEventListener('click', () => {
   link.click();
   document.body.removeChild(link);
 });
+
+function tandaiEspOffline(selisihDetik, waktuTerakhir) {
+  const badge = document.getElementById('overall-badge');
+  badge.className = "badge-pill danger";
+  
+  const menitLalu = Math.floor(selisihDetik / 60);
+  badge.innerText = menitLalu > 0 
+    ? `🔴 ESP32 OFFLINE (Terputus ${menitLalu} mnt lalu)` 
+    : `🔴 ESP32 OFFLINE (${selisihDetik} dtk lalu)`;
+
+  // Beri indikasi visual redup pada angka pembacaan
+  document.getElementById('val-ph').style.opacity = "0.45";
+  document.getElementById('val-ec').style.opacity = "0.45";
+  document.getElementById('val-suhu').style.opacity = "0.45";
+
+  // Matikan indikator pompa sirkulasi & dosing
+  updatePumpUI('a', false);
+  updatePumpUI('b', false);
+  updatePumpUI('ph', false);
+  updateCirculationUI(false);
+}
+
+function kembalikanStatusOnline() {
+  document.getElementById('val-ph').style.opacity = "1.0";
+  document.getElementById('val-ec').style.opacity = "1.0";
+  document.getElementById('val-suhu').style.opacity = "1.0";
+}
